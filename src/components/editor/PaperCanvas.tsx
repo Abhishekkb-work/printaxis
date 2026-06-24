@@ -1,0 +1,349 @@
+import { useEffect, useRef, useState } from "react";
+import { useEditor } from "@/lib/editor/store";
+import type { Layer } from "@/lib/editor/types";
+import { paperDims } from "@/lib/editor/store";
+
+type Props = {
+  pxPerMm: number;
+  offset: { x: number; y: number };
+  onOffsetChange: (o: { x: number; y: number }) => void;
+};
+
+export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
+  const { state, dispatch } = useEditor();
+  const p = state.present;
+  const { wMm, hMm } = paperDims(p);
+  const W = wMm * pxPerMm;
+  const H = hMm * pxPerMm;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
+
+  function onPaperPointerDown(e: React.PointerEvent) {
+    if (e.target !== e.currentTarget) return;
+    dispatch({ type: "select", id: null });
+    panRef.current = { startX: e.clientX, startY: e.clientY, ox: offset.x, oy: offset.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onPaperPointerMove(e: React.PointerEvent) {
+    if (!panRef.current) return;
+    onOffsetChange({
+      x: panRef.current.ox + (e.clientX - panRef.current.startX),
+      y: panRef.current.oy + (e.clientY - panRef.current.startY),
+    });
+  }
+  function onPaperPointerUp(e: React.PointerEvent) {
+    panRef.current = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden bg-muted/40 touch-none select-none"
+      onPointerDown={onPaperPointerDown}
+      onPointerMove={onPaperPointerMove}
+      onPointerUp={onPaperPointerUp}
+      onPointerCancel={onPaperPointerUp}
+    >
+      <Rulers pxPerMm={pxPerMm} offset={offset} wMm={wMm} hMm={hMm} unit={p.unit} />
+      <div
+        className="absolute"
+        style={{
+          left: offset.x + 24,
+          top: offset.y + 24,
+          width: W,
+          height: H,
+        }}
+      >
+        {/* paper sheet */}
+        <div
+          className="absolute inset-0 bg-white shadow-lg"
+          style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.18)" }}
+        />
+        {/* margin guide */}
+        <div
+          className="absolute pointer-events-none border border-dashed"
+          style={{
+            left: p.marginMm * pxPerMm,
+            top: p.marginMm * pxPerMm,
+            width: (wMm - 2 * p.marginMm) * pxPerMm,
+            height: (hMm - 2 * p.marginMm) * pxPerMm,
+            borderColor: "rgba(30,64,175,0.35)",
+          }}
+        />
+        {/* grid */}
+        {p.showGrid && <Grid pxPerMm={pxPerMm} wMm={wMm} hMm={hMm} gridMm={p.gridMm} />}
+        {/* layers */}
+        {p.layers.map((l) => (
+          <LayerView key={l.id} layer={l} pxPerMm={pxPerMm} selected={state.selectedId === l.id} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Grid({ pxPerMm, wMm, hMm, gridMm }: { pxPerMm: number; wMm: number; hMm: number; gridMm: number }) {
+  const step = gridMm * pxPerMm;
+  return (
+    <svg className="absolute inset-0 pointer-events-none" width={wMm * pxPerMm} height={hMm * pxPerMm}>
+      <defs>
+        <pattern id="grid" width={step} height={step} patternUnits="userSpaceOnUse">
+          <path d={`M ${step} 0 L 0 0 0 ${step}`} fill="none" stroke="rgba(30,64,175,0.15)" strokeWidth="0.5" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+    </svg>
+  );
+}
+
+function Rulers({
+  pxPerMm,
+  offset,
+  wMm,
+  hMm,
+  unit,
+}: {
+  pxPerMm: number;
+  offset: { x: number; y: number };
+  wMm: number;
+  hMm: number;
+  unit: string;
+}) {
+  // Top + left rulers in 10mm steps with labels in active unit.
+  const step = 10; // mm
+  const ticks: number[] = [];
+  for (let i = 0; i <= Math.ceil(wMm / step); i++) ticks.push(i * step);
+  const vticks: number[] = [];
+  for (let i = 0; i <= Math.ceil(hMm / step); i++) vticks.push(i * step);
+  const label = (mm: number) => {
+    if (unit === "in") return (mm / 25.4).toFixed(1);
+    if (unit === "cm") return (mm / 10).toFixed(0);
+    return mm.toString();
+  };
+  return (
+    <>
+      <div className="absolute top-0 left-6 right-0 h-6 bg-card/95 border-b border-border overflow-hidden text-[9px] text-muted-foreground">
+        <div className="relative h-full" style={{ transform: `translateX(${offset.x}px)` }}>
+          {ticks.map((t) => (
+            <div key={t} className="absolute top-0 h-full" style={{ left: t * pxPerMm }}>
+              <div className="absolute bottom-0 w-px h-2 bg-foreground/40" />
+              <div className="absolute bottom-2 left-1">{label(t)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute top-6 left-0 bottom-0 w-6 bg-card/95 border-r border-border overflow-hidden text-[9px] text-muted-foreground">
+        <div className="relative w-full h-full" style={{ transform: `translateY(${offset.y}px)` }}>
+          {vticks.map((t) => (
+            <div key={t} className="absolute left-0 w-full" style={{ top: t * pxPerMm }}>
+              <div className="absolute right-0 h-px w-2 bg-foreground/40" />
+              <div className="absolute right-2 top-0.5">{label(t)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute top-0 left-0 w-6 h-6 bg-card border-b border-r border-border text-[8px] text-muted-foreground flex items-center justify-center">
+        {unit}
+      </div>
+    </>
+  );
+}
+
+type Drag =
+  | { kind: "move"; sx: number; sy: number; ox: number; oy: number }
+  | { kind: "resize"; corner: "br" | "bl" | "tr" | "tl"; sx: number; sy: number; ow: number; oh: number; ox: number; oy: number; aspect: number }
+  | { kind: "rotate"; cx: number; cy: number; startAngle: number; origRot: number };
+
+function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number; selected: boolean }) {
+  const { state, dispatch } = useEditor();
+  const p = state.present;
+  const dragRef = useRef<Drag | null>(null);
+  const elRef = useRef<HTMLDivElement>(null);
+
+  const W = layer.wMm * pxPerMm;
+  const H = layer.hMm * pxPerMm;
+
+  function snap(mm: number) {
+    if (!p.snap) return mm;
+    const s = p.gridMm;
+    return Math.round(mm / s) * s;
+  }
+
+  function update(mut: (l: Layer) => Layer, transient: boolean) {
+    dispatch({
+      type: "set",
+      transient,
+      updater: (proj) => ({
+        ...proj,
+        layers: proj.layers.map((l) => (l.id === layer.id ? mut(l) : l)),
+      }),
+    });
+  }
+
+  function onPointerDown(e: React.PointerEvent) {
+    e.stopPropagation();
+    if (layer.locked || layer.hidden) return;
+    dispatch({ type: "select", id: layer.id });
+    dragRef.current = {
+      kind: "move",
+      sx: e.clientX,
+      sy: e.clientY,
+      ox: layer.xMm,
+      oy: layer.yMm,
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const d = dragRef.current;
+    if (!d) return;
+    if (d.kind === "move") {
+      const dx = (e.clientX - d.sx) / pxPerMm;
+      const dy = (e.clientY - d.sy) / pxPerMm;
+      update((l) => ({ ...l, xMm: snap(d.ox + dx), yMm: snap(d.oy + dy) }), true);
+    } else if (d.kind === "resize") {
+      const dx = (e.clientX - d.sx) / pxPerMm;
+      const dy = (e.clientY - d.sy) / pxPerMm;
+      let nw = d.ow;
+      let nh = d.oh;
+      let nx = d.ox;
+      let ny = d.oy;
+      const signX = d.corner === "br" || d.corner === "tr" ? 1 : -1;
+      const signY = d.corner === "br" || d.corner === "bl" ? 1 : -1;
+      nw = Math.max(3, d.ow + signX * dx);
+      nh = Math.max(3, d.oh + signY * dy);
+      // maintain aspect ratio if shift not held → default: keep aspect
+      if (!e.shiftKey) {
+        // ratio-lock
+        if (Math.abs(nw - d.ow) > Math.abs(nh - d.oh)) {
+          nh = nw / d.aspect;
+        } else {
+          nw = nh * d.aspect;
+        }
+      }
+      if (signX < 0) nx = d.ox + (d.ow - nw);
+      if (signY < 0) ny = d.oy + (d.oh - nh);
+      update((l) => ({ ...l, wMm: nw, hMm: nh, xMm: nx, yMm: ny }), true);
+    } else if (d.kind === "rotate") {
+      const rect = elRef.current!.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const angle = (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
+      update((l) => ({ ...l, rotation: d.origRot + (angle - d.startAngle) }), true);
+    }
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    // Commit a non-transient action to push history.
+    update((l) => ({ ...l }), false);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+  }
+
+  const transform = `rotate(${layer.rotation}deg) scaleX(${layer.flipH ? -1 : 1}) scaleY(${layer.flipV ? -1 : 1})`;
+  const filter = `brightness(${layer.brightness}%) contrast(${layer.contrast}%) saturate(${layer.saturation}%) grayscale(${layer.grayscale}%)`;
+
+  if (layer.hidden) return null;
+
+  return (
+    <div
+      ref={elRef}
+      className="absolute"
+      style={{
+        left: layer.xMm * pxPerMm,
+        top: layer.yMm * pxPerMm,
+        width: W,
+        height: H,
+      }}
+    >
+      <div
+        className={`absolute inset-0 ${selected ? "outline outline-2 outline-primary" : ""}`}
+        style={{ transform, transformOrigin: "center center" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        {layer.src ? (
+          <img
+            src={layer.src}
+            alt={layer.name}
+            draggable={false}
+            className="w-full h-full object-fill pointer-events-none"
+            style={{ filter }}
+          />
+        ) : (
+          <div className="w-full h-full bg-muted/60 border border-dashed border-muted-foreground/40 flex items-center justify-center text-[10px] text-muted-foreground">
+            Empty slot
+          </div>
+        )}
+      </div>
+      {selected && !layer.locked && (
+        <>
+          {(["tl", "tr", "bl", "br"] as const).map((corner) => {
+            const pos: Record<typeof corner, React.CSSProperties> = {
+              tl: { left: -6, top: -6, cursor: "nwse-resize" },
+              tr: { right: -6, top: -6, cursor: "nesw-resize" },
+              bl: { left: -6, bottom: -6, cursor: "nesw-resize" },
+              br: { right: -6, bottom: -6, cursor: "nwse-resize" },
+            };
+            return (
+              <div
+                key={corner}
+                className="absolute w-3 h-3 bg-primary border-2 border-background rounded-sm"
+                style={pos[corner]}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  dragRef.current = {
+                    kind: "resize",
+                    corner,
+                    sx: e.clientX,
+                    sy: e.clientY,
+                    ow: layer.wMm,
+                    oh: layer.hMm,
+                    ox: layer.xMm,
+                    oy: layer.yMm,
+                    aspect: layer.wMm / layer.hMm,
+                  };
+                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+              />
+            );
+          })}
+          <div
+            className="absolute left-1/2 -top-7 -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-2 border-background cursor-grab"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              const rect = elRef.current!.getBoundingClientRect();
+              const cx = rect.left + rect.width / 2;
+              const cy = rect.top + rect.height / 2;
+              const angle = (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
+              dragRef.current = { kind: "rotate", cx, cy, startAngle: angle, origRot: layer.rotation };
+              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+// Hook into URL "?sw=off" etc. is unrelated; export to satisfy isolatedModules.
+export type { Props as PaperCanvasProps };
+
+// Internal helper to keep React happy with the inline state setter typing.
+// (kept for future enhancements)
+export function useTransientSet() {
+  const [_, set] = useState(0);
+  useEffect(() => () => {}, []);
+  return set;
+}
