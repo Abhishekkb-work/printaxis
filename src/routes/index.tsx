@@ -1,29 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { EditorRoot } from "@/components/editor/Editor";
+import { registerPwa } from "@/lib/pwa-register";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Print Adjuster Pro — Offline print layout editor" },
+      { name: "description", content: "Place photos and documents on a virtual paper canvas at exact mm/cm/inch dimensions, then print or export to PDF. Works fully offline." },
+      { name: "theme-color", content: "#1e40af" },
+      { property: "og:title", content: "Print Adjuster Pro" },
+      { property: "og:description", content: "Offline print layout editor with exact-size sizing, templates and PDF export." },
+    ],
+    links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  useEffect(() => { registerPwa(); }, []);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <>
+      <EditorRoot />
+      <Toaster richColors position="top-center" />
+    </>
   );
 }
