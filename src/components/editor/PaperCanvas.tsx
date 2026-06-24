@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useEditor } from "@/lib/editor/store";
 import type { Layer } from "@/lib/editor/types";
 import { paperDims } from "@/lib/editor/store";
@@ -339,11 +339,3 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
 
 // Hook into URL "?sw=off" etc. is unrelated; export to satisfy isolatedModules.
 export type { Props as PaperCanvasProps };
-
-// Internal helper to keep React happy with the inline state setter typing.
-// (kept for future enhancements)
-export function useTransientSet() {
-  const [_, set] = useState(0);
-  useEffect(() => () => {}, []);
-  return set;
-}
