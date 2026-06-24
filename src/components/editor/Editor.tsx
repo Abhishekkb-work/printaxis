@@ -5,7 +5,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter,
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
-  Grid3x3, Maximize2, FolderOpen, Plus, Sparkles,
+  Maximize2, FolderOpen, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
