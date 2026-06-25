@@ -8,11 +8,16 @@ export default defineConfig({
   vite: {
     plugins: [
       VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
         registerType: "autoUpdate",
         injectRegister: null,
-        filename: "sw.js",
         devOptions: { enabled: false },
         includeAssets: ["favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png"],
+        injectManifest: {
+          globPatterns: ["**/*.{js,css,html,png,svg,webmanifest,woff2}"],
+        },
         manifest: {
           name: "Print Adjuster Pro",
           short_name: "PrintAdjuster",
@@ -29,26 +34,19 @@ export default defineConfig({
             { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
             { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
           ],
-        },
-        workbox: {
-          globPatterns: ["**/*.{js,css,html,png,svg,webmanifest,woff2}"],
-          navigateFallback: "/",
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
-          runtimeCaching: [
-            {
-              urlPattern: ({ request }) => request.mode === "navigate",
-              handler: "NetworkFirst",
-              options: { cacheName: "html", networkTimeoutSeconds: 3 },
+          share_target: {
+            action: "/share-target",
+            method: "POST",
+            enctype: "multipart/form-data",
+            params: {
+              title: "title",
+              text: "text",
+              url: "url",
+              files: [
+                { name: "files", accept: ["image/*", "image/png", "image/jpeg", "image/webp"] },
+              ],
             },
-            {
-              urlPattern: ({ url }) => url.origin === self.location.origin,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "assets",
-                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              },
-            },
-          ],
+          },
         },
       }),
     ],

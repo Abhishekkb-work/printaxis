@@ -1,7 +1,6 @@
 import { useRef } from "react";
-import { useEditor } from "@/lib/editor/store";
+import { useEditor, paperDims, activeLayers, setLayers } from "@/lib/editor/store";
 import type { Layer } from "@/lib/editor/types";
-import { paperDims } from "@/lib/editor/store";
 
 type Props = {
   pxPerMm: number;
@@ -76,7 +75,7 @@ export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
         {/* grid */}
         {p.showGrid && <Grid pxPerMm={pxPerMm} wMm={wMm} hMm={hMm} gridMm={p.gridMm} />}
         {/* layers */}
-        {p.layers.map((l) => (
+        {activeLayers(p).map((l) => (
           <LayerView key={l.id} layer={l} pxPerMm={pxPerMm} selected={state.selectedId === l.id} />
         ))}
       </div>
@@ -175,10 +174,7 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
     dispatch({
       type: "set",
       transient,
-      updater: (proj) => ({
-        ...proj,
-        layers: proj.layers.map((l) => (l.id === layer.id ? mut(l) : l)),
-      }),
+      updater: (proj) => setLayers(proj, (ls) => ls.map((l) => (l.id === layer.id ? mut(l) : l))),
     });
   }
 

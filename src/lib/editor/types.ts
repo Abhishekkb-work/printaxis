@@ -24,10 +24,16 @@ export type Layer = {
   flipV: boolean;
   locked: boolean;
   hidden: boolean;
-  brightness: number; // 0..200, 100 = neutral
+  brightness: number;
   contrast: number;
   saturation: number;
-  grayscale: number; // 0..100
+  grayscale: number;
+};
+
+export type Page = {
+  id: string;
+  name: string;
+  layers: Layer[];
 };
 
 export type Project = {
@@ -38,7 +44,8 @@ export type Project = {
   customH: number;
   orientation: Orientation;
   marginMm: number;
-  layers: Layer[];
+  pages: Page[];
+  activePageId: string;
   showGrid: boolean;
   gridMm: number;
   snap: boolean;

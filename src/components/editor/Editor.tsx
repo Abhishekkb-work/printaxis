@@ -5,7 +5,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter,
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
-  Maximize2, FolderOpen, Sparkles,
+  Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,13 +31,17 @@ import { toast } from "sonner";
 import { PaperCanvas } from "./PaperCanvas";
 import {
   EditorProvider, useEditor, paperDims, newLayerFromImage, applyTemplate,
+  activePage, activeLayers, setLayers,
+  addPage, duplicatePage, removePage, selectPage, movePage,
 } from "@/lib/editor/store";
 import type { Layer, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
 import { listProjects, saveProject, deleteProject, duplicateProject } from "@/lib/editor/storage";
-import { exportPdf, exportPng, exportJpg, printProject } from "@/lib/editor/render";
+import {
+  exportPdf, exportPng, exportJpg, exportDocx, printProject, rasterizeAll,
+} from "@/lib/editor/render";
 
 export function EditorRoot() {
   return (
@@ -50,13 +54,13 @@ export function EditorRoot() {
 function EditorShell() {
   const { state, dispatch } = useEditor();
   const p = state.present;
-  const selectedLayer = p.layers.find((l) => l.id === state.selectedId) ?? null;
+  const layers = activeLayers(p);
+  const selectedLayer = layers.find((l) => l.id === state.selectedId) ?? null;
 
   const [pxPerMm, setPxPerMm] = useState(2);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fit on first mount + on paper change
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -69,14 +73,13 @@ function EditorShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.paperId, p.orientation, p.customW, p.customH]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); dispatch({ type: "undo" }); }
       else if (mod && (e.key === "y" || (e.key === "z" && e.shiftKey))) { e.preventDefault(); dispatch({ type: "redo" }); }
       else if (e.key === "Delete" && state.selectedId) {
-        dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.filter((l) => l.id !== state.selectedId) }) });
+        dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== state.selectedId)) });
         dispatch({ type: "select", id: null });
       }
     };
@@ -84,11 +87,48 @@ function EditorShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.selectedId]);
 
+  // Android Share Target intake: read files dropped into share-inbox cache.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("shared") !== "1") return;
+    void (async () => {
+      try {
+        if (!("caches" in window)) return;
+        const cache = await caches.open("share-inbox");
+        const idxRes = await cache.match("/__share/index.json");
+        if (!idxRes) return;
+        const list = (await idxRes.json()) as string[];
+        const { wMm, hMm } = paperDims(state.present);
+        let added = 0;
+        for (const key of list) {
+          const res = await cache.match(key);
+          if (!res) continue;
+          const blob = await res.blob();
+          const src = await blobToDataUrl(blob);
+          const dim = await readImageDimensions(src);
+          const layer = newLayerFromImage({ src, intrinsicW: dim.w, intrinsicH: dim.h, paperWmm: wMm, paperHmm: hMm });
+          dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, layer]) });
+          dispatch({ type: "select", id: layer.id });
+          await cache.delete(key);
+          added++;
+        }
+        await cache.delete("/__share/index.json");
+        if (added) toast.success(`Imported ${added} shared image${added === 1 ? "" : "s"}`);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        url.searchParams.delete("shared");
+        window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
       <TopBar />
+      <PagesBar />
       <div className="flex-1 flex min-h-0">
-        {/* Left panel — md+ */}
         <aside className="hidden md:flex w-72 border-r border-border bg-card flex-col overflow-hidden">
           <SidePanel selectedLayer={selectedLayer} />
         </aside>
@@ -103,10 +143,66 @@ function EditorShell() {
   );
 }
 
+function PagesBar() {
+  const { state, dispatch } = useEditor();
+  const p = state.present;
+  const idx = p.pages.findIndex((pg) => pg.id === p.activePageId);
+  return (
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/60 overflow-x-auto">
+      <span className="text-xs text-muted-foreground mr-1 shrink-0">Pages</span>
+      {p.pages.map((pg, i) => {
+        const isActive = pg.id === p.activePageId;
+        return (
+          <div
+            key={pg.id}
+            className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs shrink-0 cursor-pointer ${
+              isActive ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:bg-accent"
+            }`}
+            onClick={() => dispatch({ type: "set", updater: (pr) => selectPage(pr, pg.id) })}
+          >
+            <span className="tabular-nums">{i + 1}</span>
+            <span className="max-w-20 truncate">{pg.name}</span>
+            {p.pages.length > 1 && (
+              <button
+                className="opacity-60 hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: "set", updater: (pr) => removePage(pr, pg.id) });
+                }}
+                title="Remove page"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Add page"
+        onClick={() => dispatch({ type: "set", updater: (pr) => addPage(pr) })}>
+        <Plus className="size-4" />
+      </Button>
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Duplicate page"
+        onClick={() => dispatch({ type: "set", updater: (pr) => duplicatePage(pr, pr.activePageId) })}>
+        <Copy className="size-4" />
+      </Button>
+      <div className="flex-1" />
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" disabled={idx <= 0}
+        onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, -1) })}>
+        <ChevronLeft className="size-4" />
+      </Button>
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move right" disabled={idx >= p.pages.length - 1}
+        onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, 1) })}>
+        <ChevronRight className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
 function TopBar() {
   const { state, dispatch } = useEditor();
   const p = state.present;
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [openProjects, setOpenProjects] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -117,17 +213,8 @@ function TopBar() {
       if (!file.type.startsWith("image/")) continue;
       const src = await fileToDataUrl(file);
       const dim = await readImageDimensions(src);
-      const layer = newLayerFromImage({
-        src,
-        intrinsicW: dim.w,
-        intrinsicH: dim.h,
-        paperWmm: wMm,
-        paperHmm: hMm,
-      });
-      dispatch({
-        type: "set",
-        updater: (proj) => ({ ...proj, layers: [...proj.layers, layer] }),
-      });
+      const layer = newLayerFromImage({ src, intrinsicW: dim.w, intrinsicH: dim.h, paperWmm: wMm, paperHmm: hMm });
+      dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, layer]) });
       dispatch({ type: "select", id: layer.id });
     }
   }
@@ -140,18 +227,9 @@ function TopBar() {
     setProjects(await listProjects());
     setOpenProjects(true);
   }
-  async function onLoad(pr: Project) {
-    dispatch({ type: "load", project: pr });
-    setOpenProjects(false);
-  }
-  async function onDelete(id: string) {
-    await deleteProject(id);
-    setProjects(await listProjects());
-  }
-  async function onDuplicate(pr: Project) {
-    await duplicateProject(pr);
-    setProjects(await listProjects());
-  }
+  async function onLoad(pr: Project) { dispatch({ type: "load", project: pr }); setOpenProjects(false); }
+  async function onDelete(id: string) { await deleteProject(id); setProjects(await listProjects()); }
+  async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
     <header className="flex items-center gap-1 px-2 py-2 border-b border-border bg-card">
@@ -173,16 +251,14 @@ function TopBar() {
         <Redo2 className="size-4" />
       </Button>
 
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/jpg"
-        multiple
-        hidden
-        onChange={(e) => handleFiles(e.target.files)}
-      />
+      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => handleFiles(e.target.files)} />
+
       <Button variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
         <Upload className="size-4 mr-1" /> Add
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => cameraRef.current?.click()} title="Take a photo">
+        <Camera className="size-4 mr-1" /> <span className="hidden sm:inline">Camera</span>
       </Button>
 
       <TemplatesMenu />
@@ -197,12 +273,8 @@ function TopBar() {
       </Button>
 
       <ExportMenu />
+      <PrintPreviewButton />
 
-      <Button size="sm" onClick={() => printProject(p)}>
-        <Printer className="size-4 mr-1" /> Print
-      </Button>
-
-      {/* Mobile side panel trigger */}
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden" title="Layers & properties">
@@ -213,7 +285,7 @@ function TopBar() {
           <SheetHeader className="p-3 border-b border-border">
             <SheetTitle>Layers & properties</SheetTitle>
           </SheetHeader>
-          <SidePanel selectedLayer={state.present.layers.find((l) => l.id === state.selectedId) ?? null} />
+          <SidePanel selectedLayer={activeLayers(state.present).find((l) => l.id === state.selectedId) ?? null} />
         </SheetContent>
       </Sheet>
 
@@ -256,16 +328,12 @@ function TemplatesMenu() {
               <DropdownMenuItem
                 key={t.id}
                 onClick={() => {
-                  const first = p.layers.find((l) => l.src);
+                  const first = activeLayers(p).find((l) => l.src);
                   dispatch({
                     type: "set",
                     updater: (pr) =>
-                      applyTemplate(
-                        pr,
-                        t,
-                        first?.src ?? null,
-                        first ? { w: first.intrinsicW, h: first.intrinsicH } : undefined,
-                      ),
+                      applyTemplate(pr, t, first?.src ?? null,
+                        first ? { w: first.intrinsicW, h: first.intrinsicH } : undefined),
                   });
                 }}
               >
@@ -283,6 +351,16 @@ function TemplatesMenu() {
 function ExportMenu() {
   const { state } = useEditor();
   const [dpi, setDpi] = useState(300);
+  const [scope, setScope] = useState<"active" | "all">("all");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  async function run(name: string, fn: () => Promise<void>) {
+    try { setBusy(name); await fn(); toast.success(`${name} ready`); }
+    catch (e) { console.error(e); toast.error(`${name} failed`); }
+    finally { setBusy(null); }
+  }
+
+  const p = state.present;
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -291,6 +369,16 @@ function ExportMenu() {
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>Export</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Pages</Label>
+            <Select value={scope} onValueChange={(v) => setScope(v as "active" | "all")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Current page</SelectItem>
+                <SelectItem value="all">All pages ({p.pages.length})</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label className="text-xs">Resolution (DPI)</Label>
             <Select value={String(dpi)} onValueChange={(v) => setDpi(Number(v))}>
@@ -302,11 +390,80 @@ function ExportMenu() {
               </SelectContent>
             </Select>
           </div>
+          {scope === "all" && p.pages.length > 1 && (
+            <p className="text-[11px] text-muted-foreground">
+              PNG/JPG exports of multiple pages are packaged as a .zip file.
+            </p>
+          )}
         </div>
-        <DialogFooter className="flex-row gap-2">
-          <Button variant="outline" onClick={() => exportPng(state.present, dpi)}><ImgIcon className="size-4 mr-1" />PNG</Button>
-          <Button variant="outline" onClick={() => exportJpg(state.present, dpi)}><ImgIcon className="size-4 mr-1" />JPG</Button>
-          <Button onClick={() => exportPdf(state.present, dpi)}><FileText className="size-4 mr-1" />PDF</Button>
+        <DialogFooter className="flex-wrap gap-2">
+          <Button variant="outline" disabled={!!busy} onClick={() => run("PNG", () => exportPng(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />PNG</Button>
+          <Button variant="outline" disabled={!!busy} onClick={() => run("JPG", () => exportJpg(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />JPG</Button>
+          <Button variant="outline" disabled={!!busy} onClick={() => run("DOCX", () => exportDocx(p, dpi, scope))}><FileText className="size-4 mr-1" />DOCX</Button>
+          <Button disabled={!!busy} onClick={() => run("PDF", () => exportPdf(p, dpi, scope))}><FileText className="size-4 mr-1" />PDF</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PrintPreviewButton() {
+  const { state } = useEditor();
+  const [open, setOpen] = useState(false);
+  const [scope, setScope] = useState<"active" | "all">("all");
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const p = state.present;
+  const { wMm, hMm } = paperDims(p);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setPreviews([]);
+    void (async () => {
+      try {
+        const canvases = await rasterizeAll(p, 96, scope);
+        if (cancelled) return;
+        setPreviews(canvases.map((c) => c.toDataURL("image/jpeg", 0.85)));
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [open, scope, p]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm"><Printer className="size-4 mr-1" /> Print</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader><DialogTitle>Print preview</DialogTitle></DialogHeader>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{wMm.toFixed(0)} × {hMm.toFixed(0)} mm • {p.orientation}</span>
+          <div className="flex-1" />
+          <Select value={scope} onValueChange={(v) => setScope(v as "active" | "all")}>
+            <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Current page</SelectItem>
+              <SelectItem value="all">All pages ({p.pages.length})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-muted/40 rounded-md p-4 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
+          {loading && <div className="col-span-full text-center text-sm text-muted-foreground py-10">Rendering…</div>}
+          {!loading && previews.map((src, i) => (
+            <figure key={i} className="bg-white shadow rounded overflow-hidden" style={{ aspectRatio: `${wMm}/${hMm}` }}>
+              <img src={src} alt={`Page ${i + 1}`} className="w-full h-full object-contain" />
+              <figcaption className="text-[10px] text-center text-muted-foreground py-1 bg-card">Page {i + 1}</figcaption>
+            </figure>
+          ))}
+          {!loading && !previews.length && (
+            <div className="col-span-full text-center text-sm text-muted-foreground py-10">Nothing to print yet.</div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+          <Button onClick={() => printProject(p, 300, scope)}><Printer className="size-4 mr-1" /> Print</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -335,8 +492,14 @@ function SidePanel({ selectedLayer }: { selectedLayer: Layer | null }) {
 function PageSettings() {
   const { state, dispatch } = useEditor();
   const p = state.present;
+  const ap = activePage(p);
   return (
     <div className="space-y-4 pt-2">
+      <div>
+        <Label className="text-xs">Page name</Label>
+        <Input value={ap.name}
+          onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, pages: pr.pages.map((pg) => pg.id === pr.activePageId ? { ...pg, name: e.target.value } : pg) }) })} />
+      </div>
       <div>
         <Label className="text-xs">Paper size</Label>
         <Select value={p.paperId} onValueChange={(v) => dispatch({ type: "set", updater: (pr) => ({ ...pr, paperId: v }) })}>
@@ -389,33 +552,33 @@ function PageSettings() {
 
 function LayersList() {
   const { state, dispatch } = useEditor();
-  const layers = [...state.present.layers].reverse();
+  const layers = [...activeLayers(state.present)].reverse();
 
   function move(id: string, dir: -1 | 1) {
     dispatch({
       type: "set",
-      updater: (pr) => {
-        const i = pr.layers.findIndex((l) => l.id === id);
-        if (i < 0) return pr;
+      updater: (pr) => setLayers(pr, (ls) => {
+        const i = ls.findIndex((l) => l.id === id);
+        if (i < 0) return ls;
         const ni = i + dir;
-        if (ni < 0 || ni >= pr.layers.length) return pr;
-        const arr = [...pr.layers];
+        if (ni < 0 || ni >= ls.length) return ls;
+        const arr = [...ls];
         const [item] = arr.splice(i, 1);
         arr.splice(ni, 0, item);
-        return { ...pr, layers: arr };
-      },
+        return arr;
+      }),
     });
   }
   function mut(id: string, fn: (l: Layer) => Layer) {
-    dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.map((l) => l.id === id ? fn(l) : l) }) });
+    dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.map((l) => l.id === id ? fn(l) : l)) });
   }
   function remove(id: string) {
-    dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.filter((l) => l.id !== id) }) });
+    dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== id)) });
   }
 
   return (
     <div className="space-y-1 pt-2">
-      {!layers.length && <p className="text-sm text-muted-foreground py-4">No layers yet. Tap “Add” to import an image.</p>}
+      {!layers.length && <p className="text-sm text-muted-foreground py-4">No layers yet. Tap "Add" or "Camera" to import an image.</p>}
       {layers.map((l) => {
         const selected = state.selectedId === l.id;
         return (
@@ -445,19 +608,13 @@ function LayerProps({ layer }: { layer: Layer }) {
   const [keepAspect, setKeepAspect] = useState(true);
 
   function mut(fn: (l: Layer) => Layer) {
-    dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.map((l) => l.id === layer.id ? fn(l) : l) }) });
+    dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.map((l) => l.id === layer.id ? fn(l) : l)) });
   }
   function setW(mm: number) {
-    mut((l) => {
-      const aspect = l.wMm / l.hMm;
-      return { ...l, wMm: mm, hMm: keepAspect ? mm / aspect : l.hMm };
-    });
+    mut((l) => { const aspect = l.wMm / l.hMm; return { ...l, wMm: mm, hMm: keepAspect ? mm / aspect : l.hMm }; });
   }
   function setH(mm: number) {
-    mut((l) => {
-      const aspect = l.wMm / l.hMm;
-      return { ...l, hMm: mm, wMm: keepAspect ? mm * aspect : l.wMm };
-    });
+    mut((l) => { const aspect = l.wMm / l.hMm; return { ...l, hMm: mm, wMm: keepAspect ? mm * aspect : l.wMm }; });
   }
 
   return (
@@ -482,7 +639,7 @@ function LayerProps({ layer }: { layer: Layer }) {
         <Button variant="outline" size="sm" onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))}><RotateCw className="size-3.5 mr-1" />90°</Button>
         <Button variant="outline" size="sm" onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))}><FlipHorizontal className="size-3.5" /></Button>
         <Button variant="outline" size="sm" onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))}><FlipVertical className="size-3.5" /></Button>
-        <Button variant="outline" size="sm" onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: [...pr.layers, { ...layer, id: crypto.randomUUID(), xMm: layer.xMm + 5, yMm: layer.yMm + 5 }] }) })}><Copy className="size-3.5 mr-1" />Duplicate</Button>
+        <Button variant="outline" size="sm" onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...layer, id: crypto.randomUUID(), xMm: layer.xMm + 5, yMm: layer.yMm + 5 }]) })}><Copy className="size-3.5 mr-1" />Duplicate</Button>
       </div>
       <div className="pt-2 space-y-2 border-t border-border">
         <SliderRow label="Brightness" value={layer.brightness} min={0} max={200} onChange={(v) => mut((l) => ({ ...l, brightness: v }))} />
@@ -517,10 +674,7 @@ function UnitInput({ label, mm, unit, onChange }: { label: string; mm: number; u
         step="0.1"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          const n = parseFloat(text);
-          if (!isNaN(n)) onChange(toMm(n, unit));
-        }}
+        onBlur={() => { const n = parseFloat(text); if (!isNaN(n)) onChange(toMm(n, unit)); }}
       />
     </div>
   );
@@ -537,7 +691,7 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
     );
   }
   function mut(fn: (l: Layer) => Layer) {
-    dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.map((l) => l.id === selectedLayer!.id ? fn(l) : l) }) });
+    dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.map((l) => l.id === selectedLayer!.id ? fn(l) : l)) });
   }
   const { wMm, hMm } = paperDims(p);
   function alignH(kind: "left" | "center" | "right") {
@@ -559,8 +713,8 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate 90°"><RotateCw className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip horizontal"><FlipHorizontal className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip vertical"><FlipVertical className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: [...pr.layers, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }] }) })} title="Duplicate"><Copy className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => { dispatch({ type: "set", updater: (pr) => ({ ...pr, layers: pr.layers.filter((l) => l.id !== selectedLayer!.id) }) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-4" /></Button>
     </footer>
   );
 }
@@ -583,6 +737,14 @@ function fileToDataUrl(file: File): Promise<string> {
     r.onload = () => resolve(r.result as string);
     r.onerror = reject;
     r.readAsDataURL(file);
+  });
+}
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
   });
 }
 function readImageDimensions(src: string): Promise<{ w: number; h: number }> {
