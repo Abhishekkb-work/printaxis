@@ -153,7 +153,7 @@ export async function exportDocx(project: Project, dpi: number, scope: Scope = "
       }),
   );
   // Insert page breaks between pages
-  const finalChildren: docx.Paragraph[] = [];
+  const finalChildren: InstanceType<typeof docx.Paragraph>[] = [];
   for (let i = 0; i < children.length; i++) {
     finalChildren.push(children[i]);
     if (i < children.length - 1) {
