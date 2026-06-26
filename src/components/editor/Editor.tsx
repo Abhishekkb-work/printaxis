@@ -987,11 +987,7 @@ function SharedImportDialog({
 
   if (!items || !items.length) return null;
 
-  function placeOnPage(page: Project["pages"][number], layer: Layer) {
-    layer.id = crypto.randomUUID();
-    // (mutation handled by caller via dispatch)
-    return { ...page, layers: [...page.layers, layer] };
-  }
+
 
   function importAll() {
     const p = state.present;
