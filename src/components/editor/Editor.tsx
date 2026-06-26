@@ -65,6 +65,11 @@ function EditorShell() {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Pending images received from the Android share-target intake.
+  const [sharedPending, setSharedPending] = useState<
+    { src: string; w: number; h: number }[] | null
+  >(null);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -91,7 +96,8 @@ function EditorShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.selectedId]);
 
-  // Android Share Target intake: read files dropped into share-inbox cache.
+  // Android Share Target intake: read files dropped into share-inbox cache,
+  // then open the smart-import dialog so the user picks how to place them.
   useEffect(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("shared") !== "1") return;
@@ -102,22 +108,18 @@ function EditorShell() {
         const idxRes = await cache.match("/__share/index.json");
         if (!idxRes) return;
         const list = (await idxRes.json()) as string[];
-        const { wMm, hMm } = paperDims(state.present);
-        let added = 0;
+        const collected: { src: string; w: number; h: number }[] = [];
         for (const key of list) {
           const res = await cache.match(key);
           if (!res) continue;
           const blob = await res.blob();
           const src = await blobToDataUrl(blob);
           const dim = await readImageDimensions(src);
-          const layer = newLayerFromImage({ src, intrinsicW: dim.w, intrinsicH: dim.h, paperWmm: wMm, paperHmm: hMm });
-          dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, layer]) });
-          dispatch({ type: "select", id: layer.id });
+          collected.push({ src, w: dim.w, h: dim.h });
           await cache.delete(key);
-          added++;
         }
         await cache.delete("/__share/index.json");
-        if (added) toast.success(`Imported ${added} shared image${added === 1 ? "" : "s"}`);
+        if (collected.length) setSharedPending(collected);
       } catch (e) {
         console.error(e);
       } finally {
@@ -143,9 +145,14 @@ function EditorShell() {
         </div>
       </div>
       <BottomBar selectedLayer={selectedLayer} />
+      <SharedImportDialog
+        items={sharedPending}
+        onClose={() => setSharedPending(null)}
+      />
     </div>
   );
 }
+
 
 function PagesBar() {
   const { state, dispatch } = useEditor();
