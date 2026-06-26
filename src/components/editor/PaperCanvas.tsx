@@ -218,9 +218,19 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
           nw = nh * d.aspect;
         }
       }
+      // Snap dimensions when grid snapping is enabled.
+      if (p.snap) {
+        nw = Math.max(3, Math.round(nw / p.gridMm) * p.gridMm);
+        nh = Math.max(3, Math.round(nh / p.gridMm) * p.gridMm);
+      }
       if (signX < 0) nx = d.ox + (d.ow - nw);
       if (signY < 0) ny = d.oy + (d.oh - nh);
+      if (p.snap) {
+        nx = Math.round(nx / p.gridMm) * p.gridMm;
+        ny = Math.round(ny / p.gridMm) * p.gridMm;
+      }
       update((l) => ({ ...l, wMm: nw, hMm: nh, xMm: nx, yMm: ny }), true);
+
     } else if (d.kind === "rotate") {
       const rect = elRef.current!.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;

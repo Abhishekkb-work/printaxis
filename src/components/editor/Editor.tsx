@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload, Save, Printer, Download, Undo2, Redo2,
   Trash2, Copy, Lock, Unlock, Eye, EyeOff, ArrowUp, ArrowDown,
@@ -6,6 +6,7 @@ import {
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
   Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
+  LayoutGrid, FileType2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,14 +35,17 @@ import {
   activePage, activeLayers, setLayers,
   addPage, duplicatePage, removePage, selectPage, movePage,
 } from "@/lib/editor/store";
-import type { Layer, Project, Unit } from "@/lib/editor/types";
+import type { Layer, Page, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
 import { listProjects, saveProject, deleteProject, duplicateProject } from "@/lib/editor/storage";
 import {
   exportPdf, exportPng, exportJpg, exportDocx, printProject, rasterizeAll,
+  type Scope,
 } from "@/lib/editor/render";
+import { loadPdfFromFile, renderPdfPage, parsePageRange } from "@/lib/editor/pdf-import";
+
 
 export function EditorRoot() {
   return (
@@ -60,6 +64,11 @@ function EditorShell() {
   const [pxPerMm, setPxPerMm] = useState(2);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pending images received from the Android share-target intake.
+  const [sharedPending, setSharedPending] = useState<
+    { src: string; w: number; h: number }[] | null
+  >(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -87,7 +96,8 @@ function EditorShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, state.selectedId]);
 
-  // Android Share Target intake: read files dropped into share-inbox cache.
+  // Android Share Target intake: read files dropped into share-inbox cache,
+  // then open the smart-import dialog so the user picks how to place them.
   useEffect(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("shared") !== "1") return;
@@ -98,22 +108,18 @@ function EditorShell() {
         const idxRes = await cache.match("/__share/index.json");
         if (!idxRes) return;
         const list = (await idxRes.json()) as string[];
-        const { wMm, hMm } = paperDims(state.present);
-        let added = 0;
+        const collected: { src: string; w: number; h: number }[] = [];
         for (const key of list) {
           const res = await cache.match(key);
           if (!res) continue;
           const blob = await res.blob();
           const src = await blobToDataUrl(blob);
           const dim = await readImageDimensions(src);
-          const layer = newLayerFromImage({ src, intrinsicW: dim.w, intrinsicH: dim.h, paperWmm: wMm, paperHmm: hMm });
-          dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, layer]) });
-          dispatch({ type: "select", id: layer.id });
+          collected.push({ src, w: dim.w, h: dim.h });
           await cache.delete(key);
-          added++;
         }
         await cache.delete("/__share/index.json");
-        if (added) toast.success(`Imported ${added} shared image${added === 1 ? "" : "s"}`);
+        if (collected.length) setSharedPending(collected);
       } catch (e) {
         console.error(e);
       } finally {
@@ -139,9 +145,14 @@ function EditorShell() {
         </div>
       </div>
       <BottomBar selectedLayer={selectedLayer} />
+      <SharedImportDialog
+        items={sharedPending}
+        onClose={() => setSharedPending(null)}
+      />
     </div>
   );
 }
+
 
 function PagesBar() {
   const { state, dispatch } = useEditor();
@@ -186,6 +197,7 @@ function PagesBar() {
         <Copy className="size-4" />
       </Button>
       <div className="flex-1" />
+      <PagesOverviewButton />
       <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" disabled={idx <= 0}
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, -1) })}>
         <ChevronLeft className="size-4" />
@@ -194,6 +206,7 @@ function PagesBar() {
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, 1) })}>
         <ChevronRight className="size-4" />
       </Button>
+
     </div>
   );
 }
@@ -203,13 +216,19 @@ function TopBar() {
   const p = state.present;
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
   const [openProjects, setOpenProjects] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [pdfPending, setPdfPending] = useState<File | null>(null);
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
     const { wMm, hMm } = paperDims(p);
     for (const file of Array.from(files)) {
+      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        setPdfPending(file);
+        continue;
+      }
       if (!file.type.startsWith("image/")) continue;
       const src = await fileToDataUrl(file);
       const dim = await readImageDimensions(src);
@@ -251,8 +270,9 @@ function TopBar() {
         <Redo2 className="size-4" />
       </Button>
 
-      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
       <Button variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
         <Upload className="size-4 mr-1" /> Add
@@ -260,6 +280,10 @@ function TopBar() {
       <Button variant="ghost" size="sm" onClick={() => cameraRef.current?.click()} title="Take a photo">
         <Camera className="size-4 mr-1" /> <span className="hidden sm:inline">Camera</span>
       </Button>
+      <Button variant="ghost" size="sm" onClick={() => pdfRef.current?.click()} title="Import PDF pages">
+        <FileType2 className="size-4 mr-1" /> <span className="hidden sm:inline">PDF</span>
+      </Button>
+
 
       <TemplatesMenu />
 
@@ -308,7 +332,9 @@ function TopBar() {
           </div>
         </DialogContent>
       </Dialog>
+      <PdfImportDialog file={pdfPending} onClose={() => setPdfPending(null)} />
     </header>
+
   );
 }
 
@@ -350,17 +376,37 @@ function TemplatesMenu() {
 
 function ExportMenu() {
   const { state } = useEditor();
+  const p = state.present;
   const [dpi, setDpi] = useState(300);
-  const [scope, setScope] = useState<"active" | "all">("all");
+  const [dpiPreset, setDpiPreset] = useState<string>("300");
+  const [scopeMode, setScopeMode] = useState<"active" | "all" | "range">("all");
+  const [rangeStr, setRangeStr] = useState("1");
   const [busy, setBusy] = useState<string | null>(null);
 
+  const scope: Scope = useMemo(() => {
+    if (scopeMode === "active") return "active";
+    if (scopeMode === "all") return "all";
+    // Parse "1-3,5" against page count, map to page IDs.
+    const nums = parsePageRange(rangeStr, p.pages.length);
+    return { pageIds: nums.map((n) => p.pages[n - 1].id) };
+  }, [scopeMode, rangeStr, p.pages]);
+
+  const pageCount =
+    scopeMode === "active"
+      ? 1
+      : scopeMode === "all"
+      ? p.pages.length
+      : typeof scope === "object" && "pageIds" in scope
+      ? scope.pageIds.length
+      : 0;
+
   async function run(name: string, fn: () => Promise<void>) {
+    if (!pageCount) { toast.error("No pages selected"); return; }
     try { setBusy(name); await fn(); toast.success(`${name} ready`); }
     catch (e) { console.error(e); toast.error(`${name} failed`); }
     finally { setBusy(null); }
   }
 
-  const p = state.present;
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -371,30 +417,50 @@ function ExportMenu() {
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Pages</Label>
-            <Select value={scope} onValueChange={(v) => setScope(v as "active" | "all")}>
+            <Select value={scopeMode} onValueChange={(v) => setScopeMode(v as typeof scopeMode)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Current page</SelectItem>
                 <SelectItem value="all">All pages ({p.pages.length})</SelectItem>
+                <SelectItem value="range">Custom range…</SelectItem>
               </SelectContent>
             </Select>
+            {scopeMode === "range" && (
+              <Input
+                className="mt-2"
+                placeholder={`e.g. 1-3,5  (of ${p.pages.length})`}
+                value={rangeStr}
+                onChange={(e) => setRangeStr(e.target.value)}
+              />
+            )}
           </div>
           <div>
             <Label className="text-xs">Resolution (DPI)</Label>
-            <Select value={String(dpi)} onValueChange={(v) => setDpi(Number(v))}>
+            <Select value={dpiPreset} onValueChange={(v) => { setDpiPreset(v); if (v !== "custom") setDpi(Number(v)); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="96">96 DPI — screen</SelectItem>
                 <SelectItem value="150">150 DPI — draft</SelectItem>
                 <SelectItem value="300">300 DPI — high quality</SelectItem>
-                <SelectItem value="600">600 DPI — original</SelectItem>
+                <SelectItem value="600">600 DPI — photo lab</SelectItem>
+                <SelectItem value="custom">Custom…</SelectItem>
               </SelectContent>
             </Select>
+            {dpiPreset === "custom" && (
+              <Input
+                className="mt-2"
+                type="number"
+                min={36}
+                max={1200}
+                value={dpi}
+                onChange={(e) => setDpi(Math.max(36, Math.min(1200, Number(e.target.value) || 0)))}
+              />
+            )}
           </div>
-          {scope === "all" && p.pages.length > 1 && (
-            <p className="text-[11px] text-muted-foreground">
-              PNG/JPG exports of multiple pages are packaged as a .zip file.
-            </p>
-          )}
+          <p className="text-[11px] text-muted-foreground">
+            {pageCount} page{pageCount === 1 ? "" : "s"} · {dpi} DPI
+            {pageCount > 1 && " · PNG/JPG packed as .zip"}
+          </p>
         </div>
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" disabled={!!busy} onClick={() => run("PNG", () => exportPng(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />PNG</Button>
@@ -406,6 +472,7 @@ function ExportMenu() {
     </Dialog>
   );
 }
+
 
 function PrintPreviewButton() {
   const { state } = useEditor();
@@ -754,3 +821,399 @@ function readImageDimensions(src: string): Promise<{ w: number; h: number }> {
     img.src = src;
   });
 }
+
+// =========================================================================
+//  PDF import dialog — render selected pages and add each as a new page.
+// =========================================================================
+function PdfImportDialog({ file, onClose }: { file: File | null; onClose: () => void }) {
+  const { state, dispatch } = useEditor();
+  const [doc, setDoc] = useState<Awaited<ReturnType<typeof loadPdfFromFile>> | null>(null);
+  const [thumbs, setThumbs] = useState<{ src: string; w: number; h: number }[]>([]);
+  const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [dpi, setDpi] = useState(200);
+  const [mode, setMode] = useState<"newPages" | "currentPage">("newPages");
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!file) { setDoc(null); setThumbs([]); setPicked(new Set()); return; }
+    let cancelled = false;
+    setLoading(true);
+    void (async () => {
+      try {
+        const d = await loadPdfFromFile(file);
+        if (cancelled) return;
+        setDoc(d);
+        const all = new Set<number>();
+        const tmps: { src: string; w: number; h: number }[] = [];
+        for (let i = 1; i <= d.numPages; i++) {
+          const img = await renderPdfPage(d, i, 48);
+          if (cancelled) return;
+          tmps.push({ src: img.src, w: img.w, h: img.h });
+          all.add(i);
+        }
+        setThumbs(tmps);
+        setPicked(all);
+      } catch (e) {
+        console.error(e);
+        toast.error("Could not read PDF");
+        onClose();
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
+
+  function toggle(n: number) {
+    const next = new Set(picked);
+    if (next.has(n)) next.delete(n); else next.add(n);
+    setPicked(next);
+  }
+
+  async function importPicked() {
+    if (!doc || !picked.size) return;
+    setBusy(true);
+    try {
+      const sorted = [...picked].sort((a, b) => a - b);
+      const p = state.present;
+      const { wMm, hMm } = paperDims(p);
+      for (const n of sorted) {
+        const img = await renderPdfPage(doc, n, dpi);
+        if (mode === "newPages") {
+          dispatch({ type: "set", updater: (pr) => addPage(pr, `${file?.name ?? "PDF"} p${n}`) });
+        }
+        const layer = newLayerFromImage({
+          src: img.src, intrinsicW: img.w, intrinsicH: img.h, paperWmm: wMm, paperHmm: hMm,
+        });
+        // Fill the page (preserve aspect within margin box).
+        const innerW = wMm - p.marginMm * 2;
+        const innerH = hMm - p.marginMm * 2;
+        const aspect = img.w / img.h;
+        let lw = innerW;
+        let lh = lw / aspect;
+        if (lh > innerH) { lh = innerH; lw = lh * aspect; }
+        layer.wMm = lw;
+        layer.hMm = lh;
+        layer.xMm = (wMm - lw) / 2;
+        layer.yMm = (hMm - lh) / 2;
+        dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, layer]) });
+        dispatch({ type: "select", id: layer.id });
+      }
+      toast.success(`Imported ${sorted.length} PDF page${sorted.length === 1 ? "" : "s"}`);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      toast.error("PDF import failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!file} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader><DialogTitle>Import PDF pages</DialogTitle></DialogHeader>
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          <span className="text-muted-foreground">
+            {doc ? `${doc.numPages} page${doc.numPages === 1 ? "" : "s"} · ${picked.size} selected` : loading ? "Reading PDF…" : ""}
+          </span>
+          <div className="flex-1" />
+          <Button size="sm" variant="outline" onClick={() => setPicked(new Set(thumbs.map((_, i) => i + 1)))}>All</Button>
+          <Button size="sm" variant="outline" onClick={() => setPicked(new Set())}>None</Button>
+          <Select value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+            <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newPages">One new page each</SelectItem>
+              <SelectItem value="currentPage">All on current page</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={String(dpi)} onValueChange={(v) => setDpi(Number(v))}>
+            <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="100">100 DPI</SelectItem>
+              <SelectItem value="200">200 DPI</SelectItem>
+              <SelectItem value="300">300 DPI</SelectItem>
+              <SelectItem value="600">600 DPI</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-1 overflow-y-auto bg-muted/40 rounded-md p-3 grid gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))" }}>
+          {loading && <div className="col-span-full text-center text-sm text-muted-foreground py-10">Rendering thumbnails…</div>}
+          {!loading && thumbs.map((t, i) => {
+            const n = i + 1;
+            const selected = picked.has(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggle(n)}
+                className={`relative bg-white rounded overflow-hidden border-2 transition-colors ${selected ? "border-primary" : "border-transparent hover:border-border"}`}
+                style={{ aspectRatio: `${t.w}/${t.h}` }}
+              >
+                <img src={t.src} alt={`Page ${n}`} className="w-full h-full object-contain" />
+                <span className={`absolute top-1 left-1 text-[10px] rounded px-1.5 py-0.5 ${selected ? "bg-primary text-primary-foreground" : "bg-card/80 text-muted-foreground"}`}>
+                  {n}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button onClick={importPicked} disabled={busy || !picked.size}>
+            {busy ? "Importing…" : `Import ${picked.size || ""}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =========================================================================
+//  Shared-images smart import — choose how to place shared images.
+// =========================================================================
+function SharedImportDialog({
+  items,
+  onClose,
+}: {
+  items: { src: string; w: number; h: number }[] | null;
+  onClose: () => void;
+}) {
+  const { state, dispatch } = useEditor();
+  const [mode, setMode] = useState<"current" | "tile" | "pages">("current");
+
+  if (!items || !items.length) return null;
+
+
+
+  function importAll() {
+    const p = state.present;
+    const { wMm, hMm } = paperDims(p);
+    dispatch({
+      type: "set",
+      updater: (pr) => {
+        let next = pr;
+        if (mode === "current") {
+          for (const it of items!) {
+            const layer = newLayerFromImage({ src: it.src, intrinsicW: it.w, intrinsicH: it.h, paperWmm: wMm, paperHmm: hMm });
+            next = setLayers(next, (ls) => [...ls, layer]);
+          }
+        } else if (mode === "pages") {
+          for (const it of items!) {
+            next = addPage(next, "Shared");
+            const innerW = wMm - next.marginMm * 2;
+            const innerH = hMm - next.marginMm * 2;
+            const aspect = it.w / it.h;
+            let lw = innerW; let lh = lw / aspect;
+            if (lh > innerH) { lh = innerH; lw = lh * aspect; }
+            const layer: Layer = {
+              ...newLayerFromImage({ src: it.src, intrinsicW: it.w, intrinsicH: it.h, paperWmm: wMm, paperHmm: hMm }),
+              wMm: lw, hMm: lh, xMm: (wMm - lw) / 2, yMm: (hMm - lh) / 2,
+            };
+            next = setLayers(next, (ls) => [...ls, layer]);
+          }
+        } else {
+          // tile on a new page in a grid
+          next = addPage(next, "Shared tile");
+          const n = items!.length;
+          const cols = Math.ceil(Math.sqrt(n));
+          const rows = Math.ceil(n / cols);
+          const innerW = wMm - next.marginMm * 2;
+          const innerH = hMm - next.marginMm * 2;
+          const gap = 2;
+          const cellW = (innerW - gap * (cols - 1)) / cols;
+          const cellH = (innerH - gap * (rows - 1)) / rows;
+          items!.forEach((it, i) => {
+            const r = Math.floor(i / cols);
+            const c = i % cols;
+            const aspect = it.w / it.h;
+            let lw = cellW; let lh = lw / aspect;
+            if (lh > cellH) { lh = cellH; lw = lh * aspect; }
+            const x = next.marginMm + c * (cellW + gap) + (cellW - lw) / 2;
+            const y = next.marginMm + r * (cellH + gap) + (cellH - lh) / 2;
+            const layer: Layer = {
+              ...newLayerFromImage({ src: it.src, intrinsicW: it.w, intrinsicH: it.h, paperWmm: wMm, paperHmm: hMm }),
+              wMm: lw, hMm: lh, xMm: x, yMm: y,
+            };
+            next = setLayers(next, (ls) => [...ls, layer]);
+          });
+        }
+        return next;
+      },
+    });
+    toast.success(`Imported ${items!.length} shared image${items!.length === 1 ? "" : "s"}`);
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Import shared images</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {items.length} image{items.length === 1 ? "" : "s"} received from Android share. Choose how to place them.
+        </p>
+        <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto">
+          {items.slice(0, 9).map((it, i) => (
+            <img key={i} src={it.src} alt="" className="aspect-square object-cover rounded border border-border" />
+          ))}
+        </div>
+        <div>
+          <Label className="text-xs">Placement</Label>
+          <Select value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">All on current page</SelectItem>
+              <SelectItem value="pages">One new page each (full-bleed)</SelectItem>
+              <SelectItem value="tile">Auto-tile on a new page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={importAll}>Import</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =========================================================================
+//  Pages overview — grid of thumbnails for every page; click to switch.
+// =========================================================================
+function PagesOverviewButton() {
+  const { state, dispatch } = useEditor();
+  const p = state.present;
+  const [open, setOpen] = useState(false);
+  const [thumbs, setThumbs] = useState<{ id: string; src: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const { wMm, hMm } = paperDims(p);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setThumbs([]);
+    setSelection(new Set());
+    void (async () => {
+      try {
+        const canvases = await rasterizeAll(p, 72, "all");
+        if (cancelled) return;
+        setThumbs(canvases.map((c, i) => ({ id: p.pages[i].id, src: c.toDataURL("image/jpeg", 0.8) })));
+      } finally { if (!cancelled) setLoading(false); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, p]);
+
+  function toggle(id: string) {
+    const next = new Set(selection);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelection(next);
+  }
+
+  function editPage(id: string) {
+    dispatch({ type: "set", updater: (pr) => selectPage(pr, id) });
+    setOpen(false);
+  }
+
+  function deleteSelected() {
+    if (!selection.size) return;
+    dispatch({
+      type: "set",
+      updater: (pr) => {
+        let next = pr;
+        for (const id of selection) next = removePage(next, id);
+        return next;
+      },
+    });
+    setSelection(new Set());
+  }
+
+  function duplicateSelected() {
+    if (!selection.size) return;
+    dispatch({
+      type: "set",
+      updater: (pr) => {
+        let next = pr;
+        for (const id of selection) next = duplicatePage(next, id);
+        return next;
+      },
+    });
+  }
+
+  return (
+    <>
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Pages overview"
+        onClick={() => setOpen(true)}>
+        <LayoutGrid className="size-4" />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader><DialogTitle>All pages ({p.pages.length})</DialogTitle></DialogHeader>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{wMm.toFixed(0)} × {hMm.toFixed(0)} mm · {p.orientation}</span>
+            <div className="flex-1" />
+            <span>{selection.size} selected</span>
+            <Button size="sm" variant="outline" disabled={!selection.size} onClick={duplicateSelected}>
+              <Copy className="size-3.5 mr-1" /> Duplicate
+            </Button>
+            <Button size="sm" variant="outline" disabled={!selection.size || p.pages.length <= 1} onClick={deleteSelected}>
+              <Trash2 className="size-3.5 mr-1" /> Delete
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto bg-muted/40 rounded-md p-3 grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))" }}>
+            {loading && <div className="col-span-full text-center text-sm text-muted-foreground py-10">Rendering thumbnails…</div>}
+            {!loading && thumbs.map((t, i) => {
+              const isActive = t.id === p.activePageId;
+              const isPicked = selection.has(t.id);
+              const page = p.pages[i];
+              return (
+                <div key={t.id} className={`group relative bg-white rounded overflow-hidden border-2 ${isPicked ? "border-primary" : isActive ? "border-primary/40" : "border-transparent hover:border-border"}`}>
+                  <button
+                    type="button"
+                    onClick={() => editPage(t.id)}
+                    className="block w-full"
+                    style={{ aspectRatio: `${wMm}/${hMm}` }}
+                    title="Open page for editing"
+                  >
+                    <img src={t.src} alt={page.name} className="w-full h-full object-contain" />
+                  </button>
+                  <div className="absolute top-1 left-1 flex items-center gap-1">
+                    <span className="text-[10px] rounded px-1.5 py-0.5 bg-card/90 text-foreground tabular-nums">{i + 1}</span>
+                    {isActive && <span className="text-[10px] rounded px-1.5 py-0.5 bg-primary text-primary-foreground">current</span>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggle(t.id); }}
+                    className={`absolute top-1 right-1 size-5 rounded border ${isPicked ? "bg-primary border-primary text-primary-foreground" : "bg-card/80 border-border text-muted-foreground"} grid place-items-center text-[10px]`}
+                    title={isPicked ? "Deselect" : "Select"}
+                  >
+                    {isPicked ? "✓" : ""}
+                  </button>
+                  <div className="px-2 py-1 text-[11px] truncate bg-card border-t border-border flex items-center gap-1">
+                    <span className="flex-1 truncate">{page.name}</span>
+                    <Button size="icon" variant="ghost" className="size-6" onClick={() => editPage(t.id)} title="Edit">
+                      <Sparkles className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+            <Button onClick={() => { dispatch({ type: "set", updater: (pr) => addPage(pr) }); setOpen(false); }}>
+              <Plus className="size-4 mr-1" /> Add page
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+

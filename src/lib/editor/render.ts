@@ -55,12 +55,17 @@ export function downloadBlob(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-type Scope = "active" | "all";
+export type Scope = "active" | "all" | { pageIds: string[] };
 
 function pagesFor(project: Project, scope: Scope): Page[] {
   if (scope === "all") return project.pages;
+  if (typeof scope === "object" && "pageIds" in scope) {
+    const set = new Set(scope.pageIds);
+    return project.pages.filter((p) => set.has(p.id));
+  }
   return [project.pages.find((p) => p.id === project.activePageId) ?? project.pages[0]];
 }
+
 
 export async function rasterizeAll(project: Project, dpi: number, scope: Scope): Promise<HTMLCanvasElement[]> {
   const out: HTMLCanvasElement[] = [];
