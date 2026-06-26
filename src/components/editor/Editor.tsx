@@ -216,13 +216,19 @@ function TopBar() {
   const p = state.present;
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
   const [openProjects, setOpenProjects] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [pdfPending, setPdfPending] = useState<File | null>(null);
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
     const { wMm, hMm } = paperDims(p);
     for (const file of Array.from(files)) {
+      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        setPdfPending(file);
+        continue;
+      }
       if (!file.type.startsWith("image/")) continue;
       const src = await fileToDataUrl(file);
       const dim = await readImageDimensions(src);
@@ -264,8 +270,9 @@ function TopBar() {
         <Redo2 className="size-4" />
       </Button>
 
-      <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => handleFiles(e.target.files)} />
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
       <Button variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
         <Upload className="size-4 mr-1" /> Add
@@ -273,6 +280,10 @@ function TopBar() {
       <Button variant="ghost" size="sm" onClick={() => cameraRef.current?.click()} title="Take a photo">
         <Camera className="size-4 mr-1" /> <span className="hidden sm:inline">Camera</span>
       </Button>
+      <Button variant="ghost" size="sm" onClick={() => pdfRef.current?.click()} title="Import PDF pages">
+        <FileType2 className="size-4 mr-1" /> <span className="hidden sm:inline">PDF</span>
+      </Button>
+
 
       <TemplatesMenu />
 
