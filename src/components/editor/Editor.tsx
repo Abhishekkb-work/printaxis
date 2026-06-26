@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Upload, Save, Printer, Download, Undo2, Redo2,
   Trash2, Copy, Lock, Unlock, Eye, EyeOff, ArrowUp, ArrowDown,
@@ -6,6 +6,7 @@ import {
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
   Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
+  LayoutGrid, FileType2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,14 +35,17 @@ import {
   activePage, activeLayers, setLayers,
   addPage, duplicatePage, removePage, selectPage, movePage,
 } from "@/lib/editor/store";
-import type { Layer, Project, Unit } from "@/lib/editor/types";
+import type { Layer, Page, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
 import { listProjects, saveProject, deleteProject, duplicateProject } from "@/lib/editor/storage";
 import {
   exportPdf, exportPng, exportJpg, exportDocx, printProject, rasterizeAll,
+  type Scope,
 } from "@/lib/editor/render";
+import { loadPdfFromFile, renderPdfPage, parsePageRange } from "@/lib/editor/pdf-import";
+
 
 export function EditorRoot() {
   return (
