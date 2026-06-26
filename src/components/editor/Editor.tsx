@@ -332,7 +332,9 @@ function TopBar() {
           </div>
         </DialogContent>
       </Dialog>
+      <PdfImportDialog file={pdfPending} onClose={() => setPdfPending(null)} />
     </header>
+
   );
 }
 
