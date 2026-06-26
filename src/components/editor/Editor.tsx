@@ -197,6 +197,7 @@ function PagesBar() {
         <Copy className="size-4" />
       </Button>
       <div className="flex-1" />
+      <PagesOverviewButton />
       <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" disabled={idx <= 0}
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, -1) })}>
         <ChevronLeft className="size-4" />
@@ -205,6 +206,7 @@ function PagesBar() {
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, 1) })}>
         <ChevronRight className="size-4" />
       </Button>
+
     </div>
   );
 }
