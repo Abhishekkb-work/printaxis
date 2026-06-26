@@ -376,17 +376,37 @@ function TemplatesMenu() {
 
 function ExportMenu() {
   const { state } = useEditor();
+  const p = state.present;
   const [dpi, setDpi] = useState(300);
-  const [scope, setScope] = useState<"active" | "all">("all");
+  const [dpiPreset, setDpiPreset] = useState<string>("300");
+  const [scopeMode, setScopeMode] = useState<"active" | "all" | "range">("all");
+  const [rangeStr, setRangeStr] = useState("1");
   const [busy, setBusy] = useState<string | null>(null);
 
+  const scope: Scope = useMemo(() => {
+    if (scopeMode === "active") return "active";
+    if (scopeMode === "all") return "all";
+    // Parse "1-3,5" against page count, map to page IDs.
+    const nums = parsePageRange(rangeStr, p.pages.length);
+    return { pageIds: nums.map((n) => p.pages[n - 1].id) };
+  }, [scopeMode, rangeStr, p.pages]);
+
+  const pageCount =
+    scopeMode === "active"
+      ? 1
+      : scopeMode === "all"
+      ? p.pages.length
+      : typeof scope === "object" && "pageIds" in scope
+      ? scope.pageIds.length
+      : 0;
+
   async function run(name: string, fn: () => Promise<void>) {
+    if (!pageCount) { toast.error("No pages selected"); return; }
     try { setBusy(name); await fn(); toast.success(`${name} ready`); }
     catch (e) { console.error(e); toast.error(`${name} failed`); }
     finally { setBusy(null); }
   }
 
-  const p = state.present;
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -397,30 +417,50 @@ function ExportMenu() {
         <div className="space-y-3">
           <div>
             <Label className="text-xs">Pages</Label>
-            <Select value={scope} onValueChange={(v) => setScope(v as "active" | "all")}>
+            <Select value={scopeMode} onValueChange={(v) => setScopeMode(v as typeof scopeMode)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Current page</SelectItem>
                 <SelectItem value="all">All pages ({p.pages.length})</SelectItem>
+                <SelectItem value="range">Custom range…</SelectItem>
               </SelectContent>
             </Select>
+            {scopeMode === "range" && (
+              <Input
+                className="mt-2"
+                placeholder={`e.g. 1-3,5  (of ${p.pages.length})`}
+                value={rangeStr}
+                onChange={(e) => setRangeStr(e.target.value)}
+              />
+            )}
           </div>
           <div>
             <Label className="text-xs">Resolution (DPI)</Label>
-            <Select value={String(dpi)} onValueChange={(v) => setDpi(Number(v))}>
+            <Select value={dpiPreset} onValueChange={(v) => { setDpiPreset(v); if (v !== "custom") setDpi(Number(v)); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="96">96 DPI — screen</SelectItem>
                 <SelectItem value="150">150 DPI — draft</SelectItem>
                 <SelectItem value="300">300 DPI — high quality</SelectItem>
-                <SelectItem value="600">600 DPI — original</SelectItem>
+                <SelectItem value="600">600 DPI — photo lab</SelectItem>
+                <SelectItem value="custom">Custom…</SelectItem>
               </SelectContent>
             </Select>
+            {dpiPreset === "custom" && (
+              <Input
+                className="mt-2"
+                type="number"
+                min={36}
+                max={1200}
+                value={dpi}
+                onChange={(e) => setDpi(Math.max(36, Math.min(1200, Number(e.target.value) || 0)))}
+              />
+            )}
           </div>
-          {scope === "all" && p.pages.length > 1 && (
-            <p className="text-[11px] text-muted-foreground">
-              PNG/JPG exports of multiple pages are packaged as a .zip file.
-            </p>
-          )}
+          <p className="text-[11px] text-muted-foreground">
+            {pageCount} page{pageCount === 1 ? "" : "s"} · {dpi} DPI
+            {pageCount > 1 && " · PNG/JPG packed as .zip"}
+          </p>
         </div>
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" disabled={!!busy} onClick={() => run("PNG", () => exportPng(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />PNG</Button>
@@ -432,6 +472,7 @@ function ExportMenu() {
     </Dialog>
   );
 }
+
 
 function PrintPreviewButton() {
   const { state } = useEditor();
