@@ -50,8 +50,8 @@ export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
       <div
         className="absolute"
         style={{
-          left: offset.x + 24,
-          top: offset.y + 24,
+          left: offset.x + 8,
+          top: offset.y + 8,
           width: W,
           height: H,
         }}
@@ -69,14 +69,14 @@ export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
             top: p.marginMm * pxPerMm,
             width: (wMm - 2 * p.marginMm) * pxPerMm,
             height: (hMm - 2 * p.marginMm) * pxPerMm,
-            borderColor: "rgba(30,64,175,0.35)",
+            borderColor: "rgba(234,88,12,0.45)",
           }}
         />
         {/* grid */}
         {p.showGrid && <Grid pxPerMm={pxPerMm} wMm={wMm} hMm={hMm} gridMm={p.gridMm} />}
         {/* layers */}
         {activeLayers(p).map((l) => (
-          <LayerView key={l.id} layer={l} pxPerMm={pxPerMm} selected={state.selectedId === l.id} />
+          <LayerView key={l.id} layer={l} pxPerMm={pxPerMm} selected={state.selectedId === l.id} paperWmm={wMm} paperHmm={hMm} />
         ))}
       </div>
     </div>
