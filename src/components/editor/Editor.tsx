@@ -897,7 +897,7 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   const p = state.present;
   if (!selectedLayer) {
     return (
-      <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-border bg-card text-xs text-muted-foreground">
+      <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 text-xs text-muted-foreground">
         Tap an image to edit it.
       </footer>
     );
@@ -914,7 +914,7 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   }
 
   return (
-    <footer className="flex items-center gap-1 px-2 py-1 border-t border-border bg-card overflow-x-auto">
+    <footer className="flex items-center gap-1 px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
       <Button size="icon" variant="ghost" onClick={() => alignH("left")} title="Align left"><AlignLeft className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => alignH("center")} title="Center horizontally"><AlignCenter className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => alignH("right")} title="Align right"><AlignRight className="size-4" /></Button>
