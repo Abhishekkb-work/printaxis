@@ -301,8 +301,9 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
             style={{ filter }}
           />
         ) : (
-          <div className="w-full h-full bg-muted/60 border border-dashed border-muted-foreground/40 flex items-center justify-center text-[10px] text-muted-foreground">
-            Empty slot
+          <div className="w-full h-full bg-orange-50/80 dark:bg-orange-950/40 border-2 border-dashed border-orange-400/60 flex flex-col items-center justify-center gap-1 text-[10px] text-orange-700 dark:text-orange-300 font-medium">
+            <span className="text-lg leading-none">＋</span>
+            <span>Tap to add image</span>
           </div>
         )}
       </div>
