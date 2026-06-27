@@ -414,6 +414,16 @@ function TopBar() {
 
       <TemplatesMenu />
 
+      <Button
+        variant={p.snap ? "secondary" : "ghost"}
+        size="sm"
+        title={`Snap to ${p.gridMm}mm grid (${p.snap ? "on" : "off"})`}
+        onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: !pr.snap }) })}
+      >
+        <Magnet className="size-4 mr-1" />
+        <span className="hidden sm:inline">Snap {p.snap ? "On" : "Off"}</span>
+      </Button>
+
       <div className="flex-1" />
 
       <Button variant="ghost" size="icon" title="Open" onClick={onOpenProjects}>
