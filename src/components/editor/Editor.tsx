@@ -130,8 +130,42 @@ function EditorShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Empty-slot click → prompt to pick an image and assign it to that slot.
+  const slotFileRef = useRef<HTMLInputElement>(null);
+  const slotTargetIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    function onSlot(e: Event) {
+      const detail = (e as CustomEvent<{ layerId: string }>).detail;
+      slotTargetIdRef.current = detail.layerId;
+      slotFileRef.current?.click();
+    }
+    window.addEventListener("pa-slot-click", onSlot as EventListener);
+    return () => window.removeEventListener("pa-slot-click", onSlot as EventListener);
+  }, []);
+  async function onSlotFile(files: FileList | null) {
+    const id = slotTargetIdRef.current;
+    const file = files?.[0];
+    if (!file || !id) return;
+    const src = await fileToDataUrl(file);
+    const dim = await readImageDimensions(src);
+    dispatch({
+      type: "set",
+      updater: (pr) =>
+        setLayers(pr, (ls) =>
+          ls.map((l) =>
+            l.id === id
+              ? { ...l, src, intrinsicW: dim.w, intrinsicH: dim.h, name: file.name }
+              : l,
+          ),
+        ),
+    });
+    dispatch({ type: "select", id });
+    slotTargetIdRef.current = null;
+  }
+
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
+      <FirstRunInstallBanner />
       <TopBar />
       <PagesBar />
       <div className="flex-1 flex min-h-0">
@@ -145,10 +179,103 @@ function EditorShell() {
         </div>
       </div>
       <BottomBar selectedLayer={selectedLayer} />
+      <CreditFooter />
+      <input
+        ref={slotFileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => { onSlotFile(e.target.files); e.target.value = ""; }}
+      />
       <SharedImportDialog
         items={sharedPending}
         onClose={() => setSharedPending(null)}
       />
+    </div>
+  );
+}
+
+// =========================================================================
+//  First-run install banner — invites the user to install the PWA.
+// =========================================================================
+type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+function FirstRunInstallBanner() {
+  const [evt, setEvt] = useState<BIPEvent | null>(null);
+  const [show, setShow] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("pa-install-dismissed") === "1") return;
+    } catch { /* ignore */ }
+    const isStandalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      // iOS Safari
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (isStandalone) { setInstalled(true); return; }
+    setShow(true);
+    function onBip(e: Event) {
+      e.preventDefault();
+      setEvt(e as BIPEvent);
+    }
+    function onInstalled() { setInstalled(true); setShow(false); }
+    window.addEventListener("beforeinstallprompt", onBip);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBip);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  function dismiss() {
+    try { localStorage.setItem("pa-install-dismissed", "1"); } catch { /* ignore */ }
+    setShow(false);
+  }
+  async function install() {
+    if (!evt) {
+      toast.message("To install", { description: "Open your browser menu and choose “Add to Home screen / Install app”." });
+      return;
+    }
+    await evt.prompt();
+    const { outcome } = await evt.userChoice;
+    if (outcome === "accepted") setShow(false);
+  }
+  if (installed || !show) return null;
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
+      <Smartphone className="size-4 shrink-0" />
+      <span className="flex-1 truncate">
+        Install <b>Print Adjuster Pro</b> as an app for offline use and a home-screen icon.
+      </span>
+      <Button size="sm" variant="secondary" className="h-7" onClick={install}>
+        Install
+      </Button>
+      <button onClick={dismiss} className="opacity-90 hover:opacity-100" aria-label="Dismiss">
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+// =========================================================================
+//  Credit footer — small "Built by" line + GitHub icon link.
+// =========================================================================
+function CreditFooter() {
+  return (
+    <div className="flex justify-end items-center gap-1.5 px-3 py-1 border-t border-border bg-card/60">
+      <span className="text-[10px] text-muted-foreground">
+        Built by <span className="font-medium text-foreground">ABHISHEK K B</span> 🧡
+      </span>
+      <a
+        href="https://github.com/"
+        target="_blank"
+        rel="noreferrer noopener"
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="GitHub"
+        title="GitHub"
+      >
+        <Github className="size-3.5" />
+      </a>
     </div>
   );
 }
