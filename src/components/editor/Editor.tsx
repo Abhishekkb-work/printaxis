@@ -378,7 +378,7 @@ function TopBar() {
   async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
-    <header className="flex items-center gap-1 px-2 py-2 border-b border-border bg-card">
+    <header className="flex items-center gap-1 px-2 py-2 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
       <div className="flex items-center gap-2 pr-2 border-r border-border">
         <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">P</div>
         <div className="hidden sm:block">
