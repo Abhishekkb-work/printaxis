@@ -46,7 +46,7 @@ export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
       onPointerUp={onPaperPointerUp}
       onPointerCancel={onPaperPointerUp}
     >
-      <Rulers pxPerMm={pxPerMm} offset={offset} wMm={wMm} hMm={hMm} unit={p.unit} />
+      {/* Rulers intentionally hidden — keep the canvas clean. */}
       <div
         className="absolute"
         style={{
