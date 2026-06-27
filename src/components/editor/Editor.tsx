@@ -35,7 +35,7 @@ import {
   activePage, activeLayers, setLayers,
   addPage, duplicatePage, removePage, selectPage, movePage,
 } from "@/lib/editor/store";
-import type { Layer, Page, Project, Unit } from "@/lib/editor/types";
+import type { Layer, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
