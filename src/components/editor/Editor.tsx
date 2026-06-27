@@ -6,7 +6,7 @@ import {
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
   Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
-  LayoutGrid, FileType2,
+  LayoutGrid, FileType2, Github, Magnet, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
