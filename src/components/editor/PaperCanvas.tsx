@@ -155,10 +155,11 @@ type Drag =
   | { kind: "resize"; corner: "br" | "bl" | "tr" | "tl"; sx: number; sy: number; ow: number; oh: number; ox: number; oy: number; aspect: number }
   | { kind: "rotate"; cx: number; cy: number; startAngle: number; origRot: number };
 
-function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number; selected: boolean }) {
+function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: Layer; pxPerMm: number; selected: boolean; paperWmm: number; paperHmm: number }) {
   const { state, dispatch } = useEditor();
   const p = state.present;
   const dragRef = useRef<Drag | null>(null);
+  const movedRef = useRef(false);
   const elRef = useRef<HTMLDivElement>(null);
 
   const W = layer.wMm * pxPerMm;
@@ -168,6 +169,12 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
     if (!p.snap) return mm;
     const s = p.gridMm;
     return Math.round(mm / s) * s;
+  }
+  function clampX(x: number, w: number) {
+    return Math.max(0, Math.min(paperWmm - w, x));
+  }
+  function clampY(y: number, h: number) {
+    return Math.max(0, Math.min(paperHmm - h, y));
   }
 
   function update(mut: (l: Layer) => Layer, transient: boolean) {
@@ -182,6 +189,7 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
     e.stopPropagation();
     if (layer.locked || layer.hidden) return;
     dispatch({ type: "select", id: layer.id });
+    movedRef.current = false;
     dragRef.current = {
       kind: "move",
       sx: e.clientX,
@@ -197,7 +205,12 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
     if (d.kind === "move") {
       const dx = (e.clientX - d.sx) / pxPerMm;
       const dy = (e.clientY - d.sy) / pxPerMm;
-      update((l) => ({ ...l, xMm: snap(d.ox + dx), yMm: snap(d.oy + dy) }), true);
+      if (Math.abs(dx) > 0.3 || Math.abs(dy) > 0.3) movedRef.current = true;
+      update((l) => ({
+        ...l,
+        xMm: clampX(snap(d.ox + dx), l.wMm),
+        yMm: clampY(snap(d.oy + dy), l.hMm),
+      }), true);
     } else if (d.kind === "resize") {
       const dx = (e.clientX - d.sx) / pxPerMm;
       const dy = (e.clientY - d.sy) / pxPerMm;
@@ -209,16 +222,13 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
       const signY = d.corner === "br" || d.corner === "bl" ? 1 : -1;
       nw = Math.max(3, d.ow + signX * dx);
       nh = Math.max(3, d.oh + signY * dy);
-      // maintain aspect ratio if shift not held → default: keep aspect
       if (!e.shiftKey) {
-        // ratio-lock
         if (Math.abs(nw - d.ow) > Math.abs(nh - d.oh)) {
           nh = nw / d.aspect;
         } else {
           nw = nh * d.aspect;
         }
       }
-      // Snap dimensions when grid snapping is enabled.
       if (p.snap) {
         nw = Math.max(3, Math.round(nw / p.gridMm) * p.gridMm);
         nh = Math.max(3, Math.round(nh / p.gridMm) * p.gridMm);
@@ -229,6 +239,11 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
         nx = Math.round(nx / p.gridMm) * p.gridMm;
         ny = Math.round(ny / p.gridMm) * p.gridMm;
       }
+      // Clamp the resized rect inside the page.
+      nw = Math.min(nw, paperWmm);
+      nh = Math.min(nh, paperHmm);
+      nx = clampX(nx, nw);
+      ny = clampY(ny, nh);
       update((l) => ({ ...l, wMm: nw, hMm: nh, xMm: nx, yMm: ny }), true);
 
     } else if (d.kind === "rotate") {
@@ -240,9 +255,13 @@ function LayerView({ layer, pxPerMm, selected }: { layer: Layer; pxPerMm: number
     }
   }
   function onPointerUp(e: React.PointerEvent) {
-    if (!dragRef.current) return;
+    const d = dragRef.current;
+    if (!d) return;
     dragRef.current = null;
-    // Commit a non-transient action to push history.
+    // Treat as click → if layer has no image, ask the host to pick one.
+    if (d.kind === "move" && !movedRef.current && !layer.src && !layer.locked) {
+      window.dispatchEvent(new CustomEvent("pa-slot-click", { detail: { layerId: layer.id } }));
+    }
     update((l) => ({ ...l }), false);
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
