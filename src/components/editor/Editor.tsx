@@ -286,7 +286,7 @@ function PagesBar() {
   const p = state.present;
   const idx = p.pages.findIndex((pg) => pg.id === p.activePageId);
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/60 overflow-x-auto">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
       <span className="text-xs text-muted-foreground mr-1 shrink-0">Pages</span>
       {p.pages.map((pg, i) => {
         const isActive = pg.id === p.activePageId;
