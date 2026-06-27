@@ -113,7 +113,7 @@ export async function exportJpg(project: Project, dpi: number, scope: Scope = "a
   downloadBlob(out, `${project.name || "pages"}.zip`);
 }
 
-export async function exportPdf(project: Project, dpi: number, scope: Scope = "all") {
+export async function exportPdf(project: Project, dpi: number, scope: Scope = "all", filename?: string) {
   const { jsPDF } = await import("jspdf");
   const { wMm, hMm } = paperDims(project);
   const canvases = await rasterizeAll(project, dpi, scope);
@@ -127,10 +127,10 @@ export async function exportPdf(project: Project, dpi: number, scope: Scope = "a
     if (i > 0) pdf.addPage([wMm, hMm], wMm > hMm ? "landscape" : "portrait");
     pdf.addImage(canvases[i].toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, wMm, hMm, undefined, "FAST");
   }
-  pdf.save(`${project.name || "page"}.pdf`);
+  pdf.save(`${(filename || project.name || "page").replace(/\.pdf$/i, "")}.pdf`);
 }
 
-export async function exportDocx(project: Project, dpi: number, scope: Scope = "all") {
+export async function exportDocx(project: Project, dpi: number, scope: Scope = "all", filename?: string) {
   const docx = await import("docx");
   const { wMm, hMm } = paperDims(project);
   const canvases = await rasterizeAll(project, dpi, scope);
@@ -157,7 +157,6 @@ export async function exportDocx(project: Project, dpi: number, scope: Scope = "
         ],
       }),
   );
-  // Insert page breaks between pages
   const finalChildren: InstanceType<typeof docx.Paragraph>[] = [];
   for (let i = 0; i < children.length; i++) {
     finalChildren.push(children[i]);
@@ -179,7 +178,7 @@ export async function exportDocx(project: Project, dpi: number, scope: Scope = "
     ],
   });
   const blob = await docx.Packer.toBlob(doc);
-  downloadBlob(blob, `${project.name || "page"}.docx`);
+  downloadBlob(blob, `${(filename || project.name || "page").replace(/\.docx$/i, "")}.docx`);
 }
 
 export async function printProject(project: Project, dpi = 300, scope: Scope = "all") {
