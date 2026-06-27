@@ -602,8 +602,16 @@ function ExportMenu() {
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" disabled={!!busy} onClick={() => run("PNG", () => exportPng(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />PNG</Button>
           <Button variant="outline" disabled={!!busy} onClick={() => run("JPG", () => exportJpg(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />JPG</Button>
-          <Button variant="outline" disabled={!!busy} onClick={() => run("DOCX", () => exportDocx(p, dpi, scope))}><FileText className="size-4 mr-1" />DOCX</Button>
-          <Button disabled={!!busy} onClick={() => run("PDF", () => exportPdf(p, dpi, scope))}><FileText className="size-4 mr-1" />PDF</Button>
+          <Button variant="outline" disabled={!!busy} onClick={() => {
+            const name = window.prompt("File name for DOCX export:", (p.name || "page").replace(/\.docx$/i, ""));
+            if (name === null) return;
+            run("DOCX", () => exportDocx(p, dpi, scope, name || undefined));
+          }}><FileText className="size-4 mr-1" />DOCX</Button>
+          <Button disabled={!!busy} onClick={() => {
+            const name = window.prompt("File name for PDF export:", (p.name || "page").replace(/\.pdf$/i, ""));
+            if (name === null) return;
+            run("PDF", () => exportPdf(p, dpi, scope, name || undefined));
+          }}><FileText className="size-4 mr-1" />PDF</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
