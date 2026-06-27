@@ -6,7 +6,7 @@ import {
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
   Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
-  LayoutGrid, FileType2,
+  LayoutGrid, FileType2, Github, Magnet, Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ import {
   activePage, activeLayers, setLayers,
   addPage, duplicatePage, removePage, selectPage, movePage,
 } from "@/lib/editor/store";
-import type { Layer, Page, Project, Unit } from "@/lib/editor/types";
+import type { Layer, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
@@ -130,8 +130,42 @@ function EditorShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Empty-slot click → prompt to pick an image and assign it to that slot.
+  const slotFileRef = useRef<HTMLInputElement>(null);
+  const slotTargetIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    function onSlot(e: Event) {
+      const detail = (e as CustomEvent<{ layerId: string }>).detail;
+      slotTargetIdRef.current = detail.layerId;
+      slotFileRef.current?.click();
+    }
+    window.addEventListener("pa-slot-click", onSlot as EventListener);
+    return () => window.removeEventListener("pa-slot-click", onSlot as EventListener);
+  }, []);
+  async function onSlotFile(files: FileList | null) {
+    const id = slotTargetIdRef.current;
+    const file = files?.[0];
+    if (!file || !id) return;
+    const src = await fileToDataUrl(file);
+    const dim = await readImageDimensions(src);
+    dispatch({
+      type: "set",
+      updater: (pr) =>
+        setLayers(pr, (ls) =>
+          ls.map((l) =>
+            l.id === id
+              ? { ...l, src, intrinsicW: dim.w, intrinsicH: dim.h, name: file.name }
+              : l,
+          ),
+        ),
+    });
+    dispatch({ type: "select", id });
+    slotTargetIdRef.current = null;
+  }
+
   return (
     <div className="flex flex-col h-dvh bg-background text-foreground">
+      <FirstRunInstallBanner />
       <TopBar />
       <PagesBar />
       <div className="flex-1 flex min-h-0">
@@ -145,10 +179,103 @@ function EditorShell() {
         </div>
       </div>
       <BottomBar selectedLayer={selectedLayer} />
+      <CreditFooter />
+      <input
+        ref={slotFileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => { onSlotFile(e.target.files); e.target.value = ""; }}
+      />
       <SharedImportDialog
         items={sharedPending}
         onClose={() => setSharedPending(null)}
       />
+    </div>
+  );
+}
+
+// =========================================================================
+//  First-run install banner — invites the user to install the PWA.
+// =========================================================================
+type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+function FirstRunInstallBanner() {
+  const [evt, setEvt] = useState<BIPEvent | null>(null);
+  const [show, setShow] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("pa-install-dismissed") === "1") return;
+    } catch { /* ignore */ }
+    const isStandalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      // iOS Safari
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (isStandalone) { setInstalled(true); return; }
+    setShow(true);
+    function onBip(e: Event) {
+      e.preventDefault();
+      setEvt(e as BIPEvent);
+    }
+    function onInstalled() { setInstalled(true); setShow(false); }
+    window.addEventListener("beforeinstallprompt", onBip);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBip);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  function dismiss() {
+    try { localStorage.setItem("pa-install-dismissed", "1"); } catch { /* ignore */ }
+    setShow(false);
+  }
+  async function install() {
+    if (!evt) {
+      toast.message("To install", { description: "Open your browser menu and choose “Add to Home screen / Install app”." });
+      return;
+    }
+    await evt.prompt();
+    const { outcome } = await evt.userChoice;
+    if (outcome === "accepted") setShow(false);
+  }
+  if (installed || !show) return null;
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
+      <Smartphone className="size-4 shrink-0" />
+      <span className="flex-1 truncate">
+        Install <b>Print Adjuster Pro</b> as an app for offline use and a home-screen icon.
+      </span>
+      <Button size="sm" variant="secondary" className="h-7" onClick={install}>
+        Install
+      </Button>
+      <button onClick={dismiss} className="opacity-90 hover:opacity-100" aria-label="Dismiss">
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+// =========================================================================
+//  Credit footer — small "Built by" line + GitHub icon link.
+// =========================================================================
+function CreditFooter() {
+  return (
+    <div className="flex justify-end items-center gap-1.5 px-3 py-1 border-t border-border bg-card/60">
+      <span className="text-[10px] text-muted-foreground">
+        Built by <span className="font-medium text-foreground">ABHISHEK K B</span> 🧡
+      </span>
+      <a
+        href="https://github.com/"
+        target="_blank"
+        rel="noreferrer noopener"
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="GitHub"
+        title="GitHub"
+      >
+        <Github className="size-3.5" />
+      </a>
     </div>
   );
 }
@@ -159,7 +286,7 @@ function PagesBar() {
   const p = state.present;
   const idx = p.pages.findIndex((pg) => pg.id === p.activePageId);
   return (
-    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card/60 overflow-x-auto">
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
       <span className="text-xs text-muted-foreground mr-1 shrink-0">Pages</span>
       {p.pages.map((pg, i) => {
         const isActive = pg.id === p.activePageId;
@@ -251,7 +378,7 @@ function TopBar() {
   async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
-    <header className="flex items-center gap-1 px-2 py-2 border-b border-border bg-card">
+    <header className="flex items-center gap-1 px-2 py-2 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
       <div className="flex items-center gap-2 pr-2 border-r border-border">
         <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">P</div>
         <div className="hidden sm:block">
@@ -286,6 +413,16 @@ function TopBar() {
 
 
       <TemplatesMenu />
+
+      <Button
+        variant={p.snap ? "secondary" : "ghost"}
+        size="sm"
+        title={`Snap to ${p.gridMm}mm grid (${p.snap ? "on" : "off"})`}
+        onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: !pr.snap }) })}
+      >
+        <Magnet className="size-4 mr-1" />
+        <span className="hidden sm:inline">Snap {p.snap ? "On" : "Off"}</span>
+      </Button>
 
       <div className="flex-1" />
 
@@ -465,8 +602,16 @@ function ExportMenu() {
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="outline" disabled={!!busy} onClick={() => run("PNG", () => exportPng(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />PNG</Button>
           <Button variant="outline" disabled={!!busy} onClick={() => run("JPG", () => exportJpg(p, dpi, scope))}><ImgIcon className="size-4 mr-1" />JPG</Button>
-          <Button variant="outline" disabled={!!busy} onClick={() => run("DOCX", () => exportDocx(p, dpi, scope))}><FileText className="size-4 mr-1" />DOCX</Button>
-          <Button disabled={!!busy} onClick={() => run("PDF", () => exportPdf(p, dpi, scope))}><FileText className="size-4 mr-1" />PDF</Button>
+          <Button variant="outline" disabled={!!busy} onClick={() => {
+            const name = window.prompt("File name for DOCX export:", (p.name || "page").replace(/\.docx$/i, ""));
+            if (name === null) return;
+            run("DOCX", () => exportDocx(p, dpi, scope, name || undefined));
+          }}><FileText className="size-4 mr-1" />DOCX</Button>
+          <Button disabled={!!busy} onClick={() => {
+            const name = window.prompt("File name for PDF export:", (p.name || "page").replace(/\.pdf$/i, ""));
+            if (name === null) return;
+            run("PDF", () => exportPdf(p, dpi, scope, name || undefined));
+          }}><FileText className="size-4 mr-1" />PDF</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -752,7 +897,7 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   const p = state.present;
   if (!selectedLayer) {
     return (
-      <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-border bg-card text-xs text-muted-foreground">
+      <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 text-xs text-muted-foreground">
         Tap an image to edit it.
       </footer>
     );
@@ -769,7 +914,7 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   }
 
   return (
-    <footer className="flex items-center gap-1 px-2 py-1 border-t border-border bg-card overflow-x-auto">
+    <footer className="flex items-center gap-1 px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
       <Button size="icon" variant="ghost" onClick={() => alignH("left")} title="Align left"><AlignLeft className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => alignH("center")} title="Center horizontally"><AlignCenter className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => alignH("right")} title="Align right"><AlignRight className="size-4" /></Button>
