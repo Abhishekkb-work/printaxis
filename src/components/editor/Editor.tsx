@@ -62,7 +62,6 @@ function EditorShell() {
   const selectedLayer = layers.find((l) => l.id === state.selectedId) ?? null;
 
   const [pxPerMm, setPxPerMm] = useState(2);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Pending images received from the Android share-target intake.
@@ -70,17 +69,25 @@ function EditorShell() {
     { src: string; w: number; h: number }[] | null
   >(null);
 
+  // Auto-fit the paper into the available canvas area, and refit on resize.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const { wMm, hMm } = paperDims(p);
-    const cw = el.clientWidth - 60;
-    const ch = el.clientHeight - 60;
-    const fit = Math.max(0.5, Math.min(cw / wMm, ch / hMm));
-    setPxPerMm(fit);
-    setOffset({ x: (el.clientWidth - 24 - wMm * fit) / 2 - 24, y: 8 });
+    function fit() {
+      const { wMm, hMm } = paperDims(p);
+      const cw = el!.clientWidth - 32;
+      const ch = el!.clientHeight - 32;
+      if (cw <= 0 || ch <= 0) return;
+      const next = Math.max(0.5, Math.min(cw / wMm, ch / hMm));
+      setPxPerMm(next);
+    }
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.paperId, p.orientation, p.customW, p.customH]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
