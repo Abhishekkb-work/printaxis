@@ -181,7 +181,7 @@ function EditorShell() {
         </aside>
 
         <div ref={containerRef} className="flex-1 relative min-w-0">
-          <PaperCanvas pxPerMm={pxPerMm} offset={offset} onOffsetChange={setOffset} />
+          <PaperCanvas pxPerMm={pxPerMm} />
           <ZoomControl pxPerMm={pxPerMm} onChange={setPxPerMm} />
         </div>
       </div>
