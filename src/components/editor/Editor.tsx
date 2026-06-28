@@ -353,6 +353,43 @@ function PagesBar() {
   );
 }
 
+/**
+ * TbBtn — compact toolbar button that always shows a tiny text label
+ * under the icon. Designed so the toolbar is readable on mobile without
+ * having to guess what each icon does.
+ */
+function TbBtn({
+  label,
+  onClick,
+  disabled,
+  active,
+  children,
+}: {
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-md transition-colors shrink-0 ${
+        active
+          ? "bg-orange-200/80 dark:bg-orange-800/60 text-foreground"
+          : "hover:bg-orange-100 dark:hover:bg-orange-900/40 text-foreground/80"
+      } disabled:opacity-40 disabled:pointer-events-none`}
+    >
+      {children}
+      <span className="text-[10px] leading-none">{label}</span>
+    </button>
+  );
+}
+
 function TopBar() {
   const { state, dispatch } = useEditor();
   const p = state.present;
