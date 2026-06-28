@@ -62,7 +62,6 @@ function EditorShell() {
   const selectedLayer = layers.find((l) => l.id === state.selectedId) ?? null;
 
   const [pxPerMm, setPxPerMm] = useState(2);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Pending images received from the Android share-target intake.
@@ -70,17 +69,25 @@ function EditorShell() {
     { src: string; w: number; h: number }[] | null
   >(null);
 
+  // Auto-fit the paper into the available canvas area, and refit on resize.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const { wMm, hMm } = paperDims(p);
-    const cw = el.clientWidth - 60;
-    const ch = el.clientHeight - 60;
-    const fit = Math.max(0.5, Math.min(cw / wMm, ch / hMm));
-    setPxPerMm(fit);
-    setOffset({ x: (el.clientWidth - 24 - wMm * fit) / 2 - 24, y: 8 });
+    function fit() {
+      const { wMm, hMm } = paperDims(p);
+      const cw = el!.clientWidth - 32;
+      const ch = el!.clientHeight - 32;
+      if (cw <= 0 || ch <= 0) return;
+      const next = Math.max(0.5, Math.min(cw / wMm, ch / hMm));
+      setPxPerMm(next);
+    }
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.paperId, p.orientation, p.customW, p.customH]);
+
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -174,7 +181,7 @@ function EditorShell() {
         </aside>
 
         <div ref={containerRef} className="flex-1 relative min-w-0">
-          <PaperCanvas pxPerMm={pxPerMm} offset={offset} onOffsetChange={setOffset} />
+          <PaperCanvas pxPerMm={pxPerMm} />
           <ZoomControl pxPerMm={pxPerMm} onChange={setPxPerMm} />
         </div>
       </div>
@@ -232,30 +239,38 @@ function FirstRunInstallBanner() {
     setShow(false);
   }
   async function install() {
-    if (!evt) {
-      toast.message("To install", { description: "Open your browser menu and choose “Add to Home screen / Install app”." });
+    // One-click install — fire the captured prompt right away. If the
+    // browser hasn't fired beforeinstallprompt yet (iOS Safari, some
+    // Android browsers), give a tiny one-line hint instead of a wall of text.
+    if (evt) {
+      try {
+        await evt.prompt();
+        const { outcome } = await evt.userChoice;
+        if (outcome === "accepted") setShow(false);
+      } catch {
+        toast.error("Install could not be started");
+      }
       return;
     }
-    await evt.prompt();
-    const { outcome } = await evt.userChoice;
-    if (outcome === "accepted") setShow(false);
+    toast.message("Use your browser menu → “Add to Home screen”.");
   }
   if (installed || !show) return null;
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
       <Smartphone className="size-4 shrink-0" />
-      <span className="flex-1 truncate">
-        Install <b>Print Adjuster Pro</b> as an app for offline use and a home-screen icon.
+      <span className="flex-1 min-w-0 truncate">
+        Install <b>Print Adjuster Pro</b> for offline use.
       </span>
-      <Button size="sm" variant="secondary" className="h-7" onClick={install}>
+      <Button size="sm" variant="secondary" className="h-7 shrink-0" onClick={install}>
         Install
       </Button>
-      <button onClick={dismiss} className="opacity-90 hover:opacity-100" aria-label="Dismiss">
+      <button onClick={dismiss} className="opacity-90 hover:opacity-100 shrink-0" aria-label="Dismiss">
         <X className="size-4" />
       </button>
     </div>
   );
 }
+
 
 // =========================================================================
 //  Credit footer — small "Built by" line + GitHub icon link.
@@ -338,6 +353,43 @@ function PagesBar() {
   );
 }
 
+/**
+ * TbBtn — compact toolbar button that always shows a tiny text label
+ * under the icon. Designed so the toolbar is readable on mobile without
+ * having to guess what each icon does.
+ */
+function TbBtn({
+  label,
+  onClick,
+  disabled,
+  active,
+  children,
+}: {
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-md transition-colors shrink-0 ${
+        active
+          ? "bg-orange-200/80 dark:bg-orange-800/60 text-foreground"
+          : "hover:bg-orange-100 dark:hover:bg-orange-900/40 text-foreground/80"
+      } disabled:opacity-40 disabled:pointer-events-none`}
+    >
+      {children}
+      <span className="text-[10px] leading-none">{label}</span>
+    </button>
+  );
+}
+
 function TopBar() {
   const { state, dispatch } = useEditor();
   const p = state.present;
@@ -378,69 +430,55 @@ function TopBar() {
   async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
-    <header className="flex items-center gap-1 px-2 py-2 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
-      <div className="flex items-center gap-2 pr-2 border-r border-border">
-        <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">P</div>
-        <div className="hidden sm:block">
-          <Input
-            value={p.name}
-            onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, name: e.target.value }) })}
-            className="h-7 w-40 text-sm"
-          />
-        </div>
+    <header className="flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
+      <div className="flex items-center gap-2 pr-2 mr-1 border-r border-border shrink-0">
+        <div className="h-8 w-8 rounded-md bg-gradient-to-br from-orange-500 to-rose-500 text-white grid place-items-center font-bold shadow">P</div>
+        <Input
+          value={p.name}
+          onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, name: e.target.value })})}
+          className="h-7 w-28 sm:w-40 text-sm"
+        />
       </div>
 
-      <Button variant="ghost" size="icon" title="Undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.past.length}>
+      <TbBtn label="Undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.past.length}>
         <Undo2 className="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="Redo" onClick={() => dispatch({ type: "redo" })} disabled={!state.future.length}>
+      </TbBtn>
+      <TbBtn label="Redo" onClick={() => dispatch({ type: "redo" })} disabled={!state.future.length}>
         <Redo2 className="size-4" />
-      </Button>
+      </TbBtn>
 
       <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
-      <Button variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
-        <Upload className="size-4 mr-1" /> Add
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => cameraRef.current?.click()} title="Take a photo">
-        <Camera className="size-4 mr-1" /> <span className="hidden sm:inline">Camera</span>
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => pdfRef.current?.click()} title="Import PDF pages">
-        <FileType2 className="size-4 mr-1" /> <span className="hidden sm:inline">PDF</span>
-      </Button>
-
+      <TbBtn label="Add" onClick={() => fileRef.current?.click()}><Upload className="size-4" /></TbBtn>
+      <TbBtn label="Camera" onClick={() => cameraRef.current?.click()}><Camera className="size-4" /></TbBtn>
+      <TbBtn label="PDF" onClick={() => pdfRef.current?.click()}><FileType2 className="size-4" /></TbBtn>
 
       <TemplatesMenu />
 
-      <Button
-        variant={p.snap ? "secondary" : "ghost"}
-        size="sm"
-        title={`Snap to ${p.gridMm}mm grid (${p.snap ? "on" : "off"})`}
+      <TbBtn
+        label={p.snap ? "Snap on" : "Snap"}
+        active={p.snap}
         onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: !pr.snap }) })}
       >
-        <Magnet className="size-4 mr-1" />
-        <span className="hidden sm:inline">Snap {p.snap ? "On" : "Off"}</span>
-      </Button>
+        <Magnet className="size-4" />
+      </TbBtn>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-2" />
 
-      <Button variant="ghost" size="icon" title="Open" onClick={onOpenProjects}>
-        <FolderOpen className="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="Save" onClick={onSave}>
-        <Save className="size-4" />
-      </Button>
+      <TbBtn label="Open" onClick={onOpenProjects}><FolderOpen className="size-4" /></TbBtn>
+      <TbBtn label="Save" onClick={onSave}><Save className="size-4" /></TbBtn>
 
       <ExportMenu />
       <PrintPreviewButton />
 
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden" title="Layers & properties">
+          <button className="md:hidden flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 text-foreground/80">
             <Layers className="size-4" />
-          </Button>
+            <span className="text-[10px] leading-none">Panel</span>
+          </button>
         </SheetTrigger>
         <SheetContent side="right" className="w-80 p-0 overflow-y-auto">
           <SheetHeader className="p-3 border-b border-border">
@@ -449,6 +487,7 @@ function TopBar() {
           <SidePanel selectedLayer={activeLayers(state.present).find((l) => l.id === state.selectedId) ?? null} />
         </SheetContent>
       </Sheet>
+
 
       <Dialog open={openProjects} onOpenChange={setOpenProjects}>
         <DialogContent className="max-w-md">
@@ -758,6 +797,28 @@ function PageSettings() {
         <Label className="text-xs">Snap to grid</Label>
         <Switch checked={p.snap} onCheckedChange={(v) => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: v }) })} />
       </div>
+      {/* Snap strength: smaller spacing = stronger / finer snapping. */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Snap strength</Label>
+          <span className="text-[11px] text-muted-foreground">{p.gridMm} mm step</span>
+        </div>
+        <input
+          type="range"
+          min={0.5}
+          max={10}
+          step={0.5}
+          value={p.gridMm}
+          disabled={!p.snap}
+          onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, gridMm: Number(e.target.value) }) })}
+          className="w-full accent-orange-500 disabled:opacity-40"
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>Fine (0.5mm)</span>
+          <span>Coarse (10mm)</span>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -4,57 +4,38 @@ import type { Layer } from "@/lib/editor/types";
 
 type Props = {
   pxPerMm: number;
-  offset: { x: number; y: number };
-  onOffsetChange: (o: { x: number; y: number }) => void;
 };
 
-export function PaperCanvas({ pxPerMm, offset, onOffsetChange }: Props) {
+/**
+ * PaperCanvas — renders the paper sheet centered inside its parent.
+ *
+ * The paper is intentionally LOCKED in place: tapping the empty surround
+ * just deselects the current layer (no panning). Mobile users were
+ * accidentally dragging the page around, so panning is removed entirely.
+ * Zoom is still available via the on-screen zoom control.
+ */
+export function PaperCanvas({ pxPerMm }: Props) {
   const { state, dispatch } = useEditor();
   const p = state.present;
   const { wMm, hMm } = paperDims(p);
   const W = wMm * pxPerMm;
   const H = hMm * pxPerMm;
   const containerRef = useRef<HTMLDivElement>(null);
-  const panRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
 
-  function onPaperPointerDown(e: React.PointerEvent) {
+  function onSurroundPointerDown(e: React.PointerEvent) {
     if (e.target !== e.currentTarget) return;
     dispatch({ type: "select", id: null });
-    panRef.current = { startX: e.clientX, startY: e.clientY, ox: offset.x, oy: offset.y };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }
-  function onPaperPointerMove(e: React.PointerEvent) {
-    if (!panRef.current) return;
-    onOffsetChange({
-      x: panRef.current.ox + (e.clientX - panRef.current.startX),
-      y: panRef.current.oy + (e.clientY - panRef.current.startY),
-    });
-  }
-  function onPaperPointerUp(e: React.PointerEvent) {
-    panRef.current = null;
-    try {
-      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
   }
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden bg-muted/40 touch-none select-none"
-      onPointerDown={onPaperPointerDown}
-      onPointerMove={onPaperPointerMove}
-      onPointerUp={onPaperPointerUp}
-      onPointerCancel={onPaperPointerUp}
+      className="relative w-full h-full overflow-auto bg-muted/40 select-none flex items-center justify-center p-4"
+      onPointerDown={onSurroundPointerDown}
     >
-      {/* Rulers intentionally hidden — keep the canvas clean. */}
       <div
-        className="absolute"
-        style={{
-          left: offset.x + 8,
-          top: offset.y + 8,
-          width: W,
-          height: H,
-        }}
+        className="relative shrink-0"
+        style={{ width: W, height: H }}
       >
         {/* paper sheet */}
         <div
