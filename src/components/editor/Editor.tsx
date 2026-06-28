@@ -239,30 +239,38 @@ function FirstRunInstallBanner() {
     setShow(false);
   }
   async function install() {
-    if (!evt) {
-      toast.message("To install", { description: "Open your browser menu and choose “Add to Home screen / Install app”." });
+    // One-click install — fire the captured prompt right away. If the
+    // browser hasn't fired beforeinstallprompt yet (iOS Safari, some
+    // Android browsers), give a tiny one-line hint instead of a wall of text.
+    if (evt) {
+      try {
+        await evt.prompt();
+        const { outcome } = await evt.userChoice;
+        if (outcome === "accepted") setShow(false);
+      } catch {
+        toast.error("Install could not be started");
+      }
       return;
     }
-    await evt.prompt();
-    const { outcome } = await evt.userChoice;
-    if (outcome === "accepted") setShow(false);
+    toast.message("Use your browser menu → “Add to Home screen”.");
   }
   if (installed || !show) return null;
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
       <Smartphone className="size-4 shrink-0" />
-      <span className="flex-1 truncate">
-        Install <b>Print Adjuster Pro</b> as an app for offline use and a home-screen icon.
+      <span className="flex-1 min-w-0 truncate">
+        Install <b>Print Adjuster Pro</b> for offline use.
       </span>
-      <Button size="sm" variant="secondary" className="h-7" onClick={install}>
+      <Button size="sm" variant="secondary" className="h-7 shrink-0" onClick={install}>
         Install
       </Button>
-      <button onClick={dismiss} className="opacity-90 hover:opacity-100" aria-label="Dismiss">
+      <button onClick={dismiss} className="opacity-90 hover:opacity-100 shrink-0" aria-label="Dismiss">
         <X className="size-4" />
       </button>
     </div>
   );
 }
+
 
 // =========================================================================
 //  Credit footer — small "Built by" line + GitHub icon link.
