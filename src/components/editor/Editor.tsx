@@ -393,69 +393,55 @@ function TopBar() {
   async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
-    <header className="flex items-center gap-1 px-2 py-2 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
-      <div className="flex items-center gap-2 pr-2 border-r border-border">
-        <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">P</div>
-        <div className="hidden sm:block">
-          <Input
-            value={p.name}
-            onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, name: e.target.value }) })}
-            className="h-7 w-40 text-sm"
-          />
-        </div>
+    <header className="flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
+      <div className="flex items-center gap-2 pr-2 mr-1 border-r border-border shrink-0">
+        <div className="h-8 w-8 rounded-md bg-gradient-to-br from-orange-500 to-rose-500 text-white grid place-items-center font-bold shadow">P</div>
+        <Input
+          value={p.name}
+          onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, name: e.target.value })})}
+          className="h-7 w-28 sm:w-40 text-sm"
+        />
       </div>
 
-      <Button variant="ghost" size="icon" title="Undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.past.length}>
+      <TbBtn label="Undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.past.length}>
         <Undo2 className="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="Redo" onClick={() => dispatch({ type: "redo" })} disabled={!state.future.length}>
+      </TbBtn>
+      <TbBtn label="Redo" onClick={() => dispatch({ type: "redo" })} disabled={!state.future.length}>
         <Redo2 className="size-4" />
-      </Button>
+      </TbBtn>
 
       <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
-      <Button variant="ghost" size="sm" onClick={() => fileRef.current?.click()}>
-        <Upload className="size-4 mr-1" /> Add
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => cameraRef.current?.click()} title="Take a photo">
-        <Camera className="size-4 mr-1" /> <span className="hidden sm:inline">Camera</span>
-      </Button>
-      <Button variant="ghost" size="sm" onClick={() => pdfRef.current?.click()} title="Import PDF pages">
-        <FileType2 className="size-4 mr-1" /> <span className="hidden sm:inline">PDF</span>
-      </Button>
-
+      <TbBtn label="Add" onClick={() => fileRef.current?.click()}><Upload className="size-4" /></TbBtn>
+      <TbBtn label="Camera" onClick={() => cameraRef.current?.click()}><Camera className="size-4" /></TbBtn>
+      <TbBtn label="PDF" onClick={() => pdfRef.current?.click()}><FileType2 className="size-4" /></TbBtn>
 
       <TemplatesMenu />
 
-      <Button
-        variant={p.snap ? "secondary" : "ghost"}
-        size="sm"
-        title={`Snap to ${p.gridMm}mm grid (${p.snap ? "on" : "off"})`}
+      <TbBtn
+        label={p.snap ? "Snap on" : "Snap"}
+        active={p.snap}
         onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: !pr.snap }) })}
       >
-        <Magnet className="size-4 mr-1" />
-        <span className="hidden sm:inline">Snap {p.snap ? "On" : "Off"}</span>
-      </Button>
+        <Magnet className="size-4" />
+      </TbBtn>
 
-      <div className="flex-1" />
+      <div className="flex-1 min-w-2" />
 
-      <Button variant="ghost" size="icon" title="Open" onClick={onOpenProjects}>
-        <FolderOpen className="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="Save" onClick={onSave}>
-        <Save className="size-4" />
-      </Button>
+      <TbBtn label="Open" onClick={onOpenProjects}><FolderOpen className="size-4" /></TbBtn>
+      <TbBtn label="Save" onClick={onSave}><Save className="size-4" /></TbBtn>
 
       <ExportMenu />
       <PrintPreviewButton />
 
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden" title="Layers & properties">
+          <button className="md:hidden flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/40 text-foreground/80">
             <Layers className="size-4" />
-          </Button>
+            <span className="text-[10px] leading-none">Panel</span>
+          </button>
         </SheetTrigger>
         <SheetContent side="right" className="w-80 p-0 overflow-y-auto">
           <SheetHeader className="p-3 border-b border-border">
@@ -464,6 +450,7 @@ function TopBar() {
           <SidePanel selectedLayer={activeLayers(state.present).find((l) => l.id === state.selectedId) ?? null} />
         </SheetContent>
       </Sheet>
+
 
       <Dialog open={openProjects} onOpenChange={setOpenProjects}>
         <DialogContent className="max-w-md">
