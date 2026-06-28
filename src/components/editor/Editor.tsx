@@ -797,6 +797,28 @@ function PageSettings() {
         <Label className="text-xs">Snap to grid</Label>
         <Switch checked={p.snap} onCheckedChange={(v) => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: v }) })} />
       </div>
+      {/* Snap strength: smaller spacing = stronger / finer snapping. */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Snap strength</Label>
+          <span className="text-[11px] text-muted-foreground">{p.gridMm} mm step</span>
+        </div>
+        <input
+          type="range"
+          min={0.5}
+          max={10}
+          step={0.5}
+          value={p.gridMm}
+          disabled={!p.snap}
+          onChange={(e) => dispatch({ type: "set", updater: (pr) => ({ ...pr, gridMm: Number(e.target.value) }) })}
+          className="w-full accent-orange-500 disabled:opacity-40"
+        />
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>Fine (0.5mm)</span>
+          <span>Coarse (10mm)</span>
+        </div>
+      </div>
+
     </div>
   );
 }
