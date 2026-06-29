@@ -233,7 +233,25 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       const angle = (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
-      update((l) => ({ ...l, rotation: d.origRot + (angle - d.startAngle) }), true);
+      const newRot = d.origRot + (angle - d.startAngle);
+      update((l) => {
+        // Clamp so the rotated bounding-box stays inside the page.
+        const rad = (newRot * Math.PI) / 180;
+        const c = Math.abs(Math.cos(rad));
+        const s = Math.abs(Math.sin(rad));
+        const bbW = l.wMm * c + l.hMm * s;
+        const bbH = l.wMm * s + l.hMm * c;
+        const cxMm = l.xMm + l.wMm / 2;
+        const cyMm = l.yMm + l.hMm / 2;
+        const ccx = Math.max(bbW / 2, Math.min(paperWmm - bbW / 2, cxMm));
+        const ccy = Math.max(bbH / 2, Math.min(paperHmm - bbH / 2, cyMm));
+        return {
+          ...l,
+          rotation: newRot,
+          xMm: ccx - l.wMm / 2,
+          yMm: ccy - l.hMm / 2,
+        };
+      }, true);
     }
   }
   function onPointerUp(e: React.PointerEvent) {
