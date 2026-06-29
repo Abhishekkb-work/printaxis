@@ -239,22 +239,22 @@ function FirstRunInstallBanner() {
     setShow(false);
   }
   async function install() {
-    // One-click install — fire the captured prompt right away. If the
-    // browser hasn't fired beforeinstallprompt yet (iOS Safari, some
-    // Android browsers), give a tiny one-line hint instead of a wall of text.
-    if (evt) {
-      try {
-        await evt.prompt();
-        const { outcome } = await evt.userChoice;
-        if (outcome === "accepted") setShow(false);
-      } catch {
-        toast.error("Install could not be started");
-      }
-      return;
+    // One-tap install: fire the captured prompt immediately. If the browser
+    // hasn't fired beforeinstallprompt yet, just stay silent — no "how to
+    // install" instructions are shown per user request.
+    if (!evt) return;
+    try {
+      await evt.prompt();
+      const { outcome } = await evt.userChoice;
+      if (outcome === "accepted") setShow(false);
+    } catch {
+      /* swallow */
     }
-    toast.message("Use your browser menu → “Add to Home screen”.");
   }
   if (installed || !show) return null;
+  // If the browser hasn't surfaced an install prompt, don't show the banner
+  // at all — avoids the "use your browser menu" fallback message.
+  if (!evt) return null;
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
       <Smartphone className="size-4 shrink-0" />
