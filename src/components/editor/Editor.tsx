@@ -1514,3 +1514,93 @@ function PagesOverviewButton() {
   );
 }
 
+// =========================================================================
+//  CropDialog — interactive crop with four edge sliders shown over a live
+//  preview of the layer's image. On Apply, replaces the layer's src and
+//  intrinsic dimensions with the cropped result and resizes the on-page
+//  rectangle proportionally so the visible content stays put.
+// =========================================================================
+function CropDialog({
+  open,
+  onOpenChange,
+  layer,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  layer: Layer;
+}) {
+  const { dispatch } = useEditor();
+  const [t, setT] = useState(0);
+  const [r, setR] = useState(0);
+  const [b, setB] = useState(0);
+  const [l, setL] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) { setT(0); setR(0); setB(0); setL(0); }
+  }, [open, layer.id]);
+
+  const wPct = Math.max(1, 100 - l - r);
+  const hPct = Math.max(1, 100 - t - b);
+
+  async function apply() {
+    if (!layer.src) return;
+    setBusy(true);
+    try {
+      const rect = { x: l / 100, y: t / 100, w: wPct / 100, h: hPct / 100 };
+      const out = await cropImage(layer.src, rect);
+      const newWmm = layer.wMm * (wPct / 100);
+      const newHmm = layer.hMm * (hPct / 100);
+      const newX = layer.xMm + layer.wMm * (l / 100);
+      const newY = layer.yMm + layer.hMm * (t / 100);
+      dispatch({
+        type: "set",
+        updater: (pr) =>
+          setLayers(pr, (ls) =>
+            ls.map((x) =>
+              x.id === layer.id
+                ? { ...x, src: out.src, intrinsicW: out.w, intrinsicH: out.h, xMm: newX, yMm: newY, wMm: newWmm, hMm: newHmm }
+                : x,
+            ),
+          ),
+      });
+      toast.success("Cropped");
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+      toast.error("Crop failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Crop image</DialogTitle></DialogHeader>
+        <div className="relative bg-muted/40 rounded-md overflow-hidden" style={{ aspectRatio: `${layer.intrinsicW}/${layer.intrinsicH}` }}>
+          {layer.src && <img src={layer.src} alt="" className="absolute inset-0 w-full h-full object-contain" />}
+          {/* dim overlays */}
+          <div className="absolute inset-x-0 top-0 bg-black/55" style={{ height: `${t}%` }} />
+          <div className="absolute inset-x-0 bottom-0 bg-black/55" style={{ height: `${b}%` }} />
+          <div className="absolute top-0 bottom-0 left-0 bg-black/55" style={{ width: `${l}%` }} />
+          <div className="absolute top-0 bottom-0 right-0 bg-black/55" style={{ width: `${r}%` }} />
+          {/* crop frame */}
+          <div className="absolute border-2 border-orange-400 pointer-events-none"
+               style={{ left: `${l}%`, right: `${r}%`, top: `${t}%`, bottom: `${b}%` }} />
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <SliderRow label="Top" value={t} min={0} max={90} onChange={setT} />
+          <SliderRow label="Bottom" value={b} min={0} max={90} onChange={setB} />
+          <SliderRow label="Left" value={l} min={0} max={90} onChange={setL} />
+          <SliderRow label="Right" value={r} min={0} max={90} onChange={setR} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+          <Button onClick={apply} disabled={busy}>{busy ? "Cropping…" : "Apply crop"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
