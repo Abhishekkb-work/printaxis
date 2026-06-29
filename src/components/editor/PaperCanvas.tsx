@@ -267,7 +267,7 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
     >
       <div
         className={`absolute inset-0 ${selected ? "outline outline-2 outline-primary" : ""}`}
-        style={{ transform, transformOrigin: "center center" }}
+        style={{ transform, transformOrigin: "center center", touchAction: "none" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
