@@ -977,6 +977,7 @@ function UnitInput({ label, mm, unit, onChange }: { label: string; mm: number; u
 function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   const { state, dispatch } = useEditor();
   const p = state.present;
+  const [cropOpen, setCropOpen] = useState(false);
   if (!selectedLayer) {
     return (
       <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 text-xs text-muted-foreground">
