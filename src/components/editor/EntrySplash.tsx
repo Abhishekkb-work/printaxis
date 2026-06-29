@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Github, ArrowRight, Sparkles } from "lucide-react";
+import { Github, ArrowRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -47,13 +47,13 @@ export function EntrySplash({ onEnter }: { onEnter: () => void }) {
 
       {/* Hero */}
       <div className="relative flex-1 w-full flex flex-col items-center justify-center px-6 text-center">
-        {/* 3D rotating paper-stack mark */}
+        {/* 3D rotating printer mark */}
         <div className="relative mb-8 [perspective:900px]">
           <div className="relative size-28 sm:size-36 pa-spin-3d">
             <div className="absolute inset-0 rounded-2xl bg-white shadow-xl border border-orange-200 [transform:rotateY(0deg)_translateZ(36px)]" />
             <div className="absolute inset-0 rounded-2xl bg-orange-100 shadow-lg border border-orange-300 [transform:rotateY(0deg)_translateZ(18px)]" />
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 shadow-2xl flex items-center justify-center text-white [transform:rotateY(0deg)_translateZ(0)]">
-              <Sparkles className="size-10 sm:size-14 drop-shadow" />
+              <Printer className="size-12 sm:size-16 drop-shadow" strokeWidth={2.2} />
             </div>
           </div>
         </div>

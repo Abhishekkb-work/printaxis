@@ -6,7 +6,7 @@ import {
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
   Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
-  LayoutGrid, FileType2, Github, Magnet, Smartphone,
+  LayoutGrid, FileType2, Github, Magnet, Smartphone, Crop, Wand2, ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -239,22 +239,22 @@ function FirstRunInstallBanner() {
     setShow(false);
   }
   async function install() {
-    // One-click install — fire the captured prompt right away. If the
-    // browser hasn't fired beforeinstallprompt yet (iOS Safari, some
-    // Android browsers), give a tiny one-line hint instead of a wall of text.
-    if (evt) {
-      try {
-        await evt.prompt();
-        const { outcome } = await evt.userChoice;
-        if (outcome === "accepted") setShow(false);
-      } catch {
-        toast.error("Install could not be started");
-      }
-      return;
+    // One-tap install: fire the captured prompt immediately. If the browser
+    // hasn't fired beforeinstallprompt yet, just stay silent — no "how to
+    // install" instructions are shown per user request.
+    if (!evt) return;
+    try {
+      await evt.prompt();
+      const { outcome } = await evt.userChoice;
+      if (outcome === "accepted") setShow(false);
+    } catch {
+      /* swallow */
     }
-    toast.message("Use your browser menu → “Add to Home screen”.");
   }
   if (installed || !show) return null;
+  // If the browser hasn't surfaced an install prompt, don't show the banner
+  // at all — avoids the "use your browser menu" fallback message.
+  if (!evt) return null;
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
       <Smartphone className="size-4 shrink-0" />
@@ -451,11 +451,32 @@ function TopBar() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
+      {/* Highlighted Import action — visually prominent so the primary
+          "bring in an image" path is obvious on mobile. */}
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        title="Import image"
+        aria-label="Import image"
+        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-md shrink-0
+                   text-white shadow-md shadow-orange-500/30
+                   bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500
+                   hover:from-orange-600 hover:to-rose-600 active:translate-y-px transition"
+        style={{ backgroundImage: "linear-gradient(135deg,#fb923c 0%,#f97316 45%,#f43f5e 100%)" }}
+      >
+        <ImagePlus className="size-4" />
+        <span className="text-[10px] leading-none font-semibold">Import</span>
+      </button>
+
       <TbBtn label="Add" onClick={() => fileRef.current?.click()}><Upload className="size-4" /></TbBtn>
       <TbBtn label="Camera" onClick={() => cameraRef.current?.click()}><Camera className="size-4" /></TbBtn>
       <TbBtn label="PDF" onClick={() => pdfRef.current?.click()}><FileType2 className="size-4" /></TbBtn>
 
       <TemplatesMenu />
+
+      <TbBtn label="Arrange" onClick={() => dispatch({ type: "set", updater: (pr) => autoArrange(pr) })}>
+        <Wand2 className="size-4" />
+      </TbBtn>
 
       <TbBtn
         label={p.snap ? "Snap on" : "Snap"}
@@ -586,7 +607,7 @@ function ExportMenu() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm"><Download className="size-4 mr-1" /> Export</Button>
+        <Button size="sm" className="bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/20"><Download className="size-4 mr-1" /> Export</Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>Export</DialogTitle></DialogHeader>
@@ -685,7 +706,7 @@ function PrintPreviewButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Printer className="size-4 mr-1" /> Print</Button>
+        <Button size="sm" className="bg-gradient-to-br from-rose-500 to-orange-600 hover:from-rose-600 hover:to-orange-700 text-white shadow-md shadow-rose-500/20"><Printer className="size-4 mr-1" /> Print</Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader><DialogTitle>Print preview</DialogTitle></DialogHeader>
@@ -956,6 +977,7 @@ function UnitInput({ label, mm, unit, onChange }: { label: string; mm: number; u
 function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   const { state, dispatch } = useEditor();
   const p = state.present;
+  const [cropOpen, setCropOpen] = useState(false);
   if (!selectedLayer) {
     return (
       <footer className="flex md:hidden items-center justify-around px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 text-xs text-muted-foreground">
@@ -986,8 +1008,10 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate 90°"><RotateCw className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip horizontal"><FlipHorizontal className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip vertical"><FlipVertical className="size-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-4" /></Button>
+      <CropDialog open={cropOpen} onOpenChange={setCropOpen} layer={selectedLayer} />
     </footer>
   );
 }
@@ -1024,6 +1048,73 @@ function readImageDimensions(src: string): Promise<{ w: number; h: number }> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = src;
+  });
+}
+
+/**
+ * autoArrange — repack the active page's visible (non-locked, non-hidden)
+ * layers into a tidy grid that fits within the page margins. Layers keep
+ * their original aspect ratio; sizes are scaled uniformly so every layer
+ * fits inside its computed cell.
+ */
+function autoArrange(pr: Project): Project {
+  const { wMm, hMm } = paperDims(pr);
+  const innerW = Math.max(10, wMm - pr.marginMm * 2);
+  const innerH = Math.max(10, hMm - pr.marginMm * 2);
+  return {
+    ...pr,
+    pages: pr.pages.map((pg) => {
+      if (pg.id !== pr.activePageId) return pg;
+      const movable = pg.layers.filter((l) => !l.hidden && !l.locked);
+      const fixed = pg.layers.filter((l) => l.hidden || l.locked);
+      const n = movable.length;
+      if (!n) return pg;
+      const cols = Math.ceil(Math.sqrt(n * (innerW / innerH)));
+      const rows = Math.ceil(n / cols);
+      const gap = Math.min(3, innerW / (cols * 6));
+      const cellW = (innerW - gap * (cols - 1)) / cols;
+      const cellH = (innerH - gap * (rows - 1)) / rows;
+      const arranged = movable.map((l, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const ar = l.wMm / l.hMm || 1;
+        let w = cellW;
+        let h = w / ar;
+        if (h > cellH) { h = cellH; w = h * ar; }
+        const cx = pr.marginMm + c * (cellW + gap) + cellW / 2;
+        const cy = pr.marginMm + r * (cellH + gap) + cellH / 2;
+        return { ...l, rotation: 0, wMm: w, hMm: h, xMm: cx - w / 2, yMm: cy - h / 2 };
+      });
+      return { ...pg, layers: [...fixed, ...arranged] };
+    }),
+  };
+}
+
+/**
+ * cropImage — given a dataURL and a percent rectangle (0..1), produce a
+ * new cropped dataURL plus its intrinsic pixel dimensions.
+ */
+function cropImage(
+  src: string,
+  rect: { x: number; y: number; w: number; h: number },
+): Promise<{ src: string; w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const sx = Math.max(0, Math.floor(rect.x * img.naturalWidth));
+      const sy = Math.max(0, Math.floor(rect.y * img.naturalHeight));
+      const sw = Math.max(1, Math.floor(rect.w * img.naturalWidth));
+      const sh = Math.max(1, Math.floor(rect.h * img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = sw;
+      c.height = sh;
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("no ctx"));
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      resolve({ src: c.toDataURL("image/png"), w: sw, h: sh });
+    };
+    img.onerror = reject;
     img.src = src;
   });
 }
@@ -1420,6 +1511,96 @@ function PagesOverviewButton() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// =========================================================================
+//  CropDialog — interactive crop with four edge sliders shown over a live
+//  preview of the layer's image. On Apply, replaces the layer's src and
+//  intrinsic dimensions with the cropped result and resizes the on-page
+//  rectangle proportionally so the visible content stays put.
+// =========================================================================
+function CropDialog({
+  open,
+  onOpenChange,
+  layer,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  layer: Layer;
+}) {
+  const { dispatch } = useEditor();
+  const [t, setT] = useState(0);
+  const [r, setR] = useState(0);
+  const [b, setB] = useState(0);
+  const [l, setL] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) { setT(0); setR(0); setB(0); setL(0); }
+  }, [open, layer.id]);
+
+  const wPct = Math.max(1, 100 - l - r);
+  const hPct = Math.max(1, 100 - t - b);
+
+  async function apply() {
+    if (!layer.src) return;
+    setBusy(true);
+    try {
+      const rect = { x: l / 100, y: t / 100, w: wPct / 100, h: hPct / 100 };
+      const out = await cropImage(layer.src, rect);
+      const newWmm = layer.wMm * (wPct / 100);
+      const newHmm = layer.hMm * (hPct / 100);
+      const newX = layer.xMm + layer.wMm * (l / 100);
+      const newY = layer.yMm + layer.hMm * (t / 100);
+      dispatch({
+        type: "set",
+        updater: (pr) =>
+          setLayers(pr, (ls) =>
+            ls.map((x) =>
+              x.id === layer.id
+                ? { ...x, src: out.src, intrinsicW: out.w, intrinsicH: out.h, xMm: newX, yMm: newY, wMm: newWmm, hMm: newHmm }
+                : x,
+            ),
+          ),
+      });
+      toast.success("Cropped");
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+      toast.error("Crop failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Crop image</DialogTitle></DialogHeader>
+        <div className="relative bg-muted/40 rounded-md overflow-hidden" style={{ aspectRatio: `${layer.intrinsicW}/${layer.intrinsicH}` }}>
+          {layer.src && <img src={layer.src} alt="" className="absolute inset-0 w-full h-full object-contain" />}
+          {/* dim overlays */}
+          <div className="absolute inset-x-0 top-0 bg-black/55" style={{ height: `${t}%` }} />
+          <div className="absolute inset-x-0 bottom-0 bg-black/55" style={{ height: `${b}%` }} />
+          <div className="absolute top-0 bottom-0 left-0 bg-black/55" style={{ width: `${l}%` }} />
+          <div className="absolute top-0 bottom-0 right-0 bg-black/55" style={{ width: `${r}%` }} />
+          {/* crop frame */}
+          <div className="absolute border-2 border-orange-400 pointer-events-none"
+               style={{ left: `${l}%`, right: `${r}%`, top: `${t}%`, bottom: `${b}%` }} />
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <SliderRow label="Top" value={t} min={0} max={90} onChange={setT} />
+          <SliderRow label="Bottom" value={b} min={0} max={90} onChange={setB} />
+          <SliderRow label="Left" value={l} min={0} max={90} onChange={setL} />
+          <SliderRow label="Right" value={r} min={0} max={90} onChange={setR} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+          <Button onClick={apply} disabled={busy}>{busy ? "Cropping…" : "Apply crop"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
