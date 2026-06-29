@@ -607,7 +607,7 @@ function ExportMenu() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm"><Download className="size-4 mr-1" /> Export</Button>
+        <Button size="sm" className="bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/20"><Download className="size-4 mr-1" /> Export</Button>
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>Export</DialogTitle></DialogHeader>
