@@ -706,7 +706,7 @@ function PrintPreviewButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm"><Printer className="size-4 mr-1" /> Print</Button>
+        <Button size="sm" className="bg-gradient-to-br from-rose-500 to-orange-600 hover:from-rose-600 hover:to-orange-700 text-white shadow-md shadow-rose-500/20"><Printer className="size-4 mr-1" /> Print</Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader><DialogTitle>Print preview</DialogTitle></DialogHeader>
