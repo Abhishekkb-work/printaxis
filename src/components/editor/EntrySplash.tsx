@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Github, ArrowRight, Sparkles } from "lucide-react";
+import { Github, ArrowRight, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
