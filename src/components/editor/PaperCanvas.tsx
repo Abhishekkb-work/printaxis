@@ -30,7 +30,8 @@ export function PaperCanvas({ pxPerMm }: Props) {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-auto bg-muted/40 select-none flex items-center justify-center p-4"
+      className="relative w-full h-full overflow-hidden bg-muted/40 select-none flex items-center justify-center p-4"
+      style={{ touchAction: "none" }}
       onPointerDown={onSurroundPointerDown}
     >
       <div
