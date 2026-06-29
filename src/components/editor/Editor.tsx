@@ -1049,6 +1049,73 @@ function readImageDimensions(src: string): Promise<{ w: number; h: number }> {
   });
 }
 
+/**
+ * autoArrange — repack the active page's visible (non-locked, non-hidden)
+ * layers into a tidy grid that fits within the page margins. Layers keep
+ * their original aspect ratio; sizes are scaled uniformly so every layer
+ * fits inside its computed cell.
+ */
+function autoArrange(pr: Project): Project {
+  const { wMm, hMm } = paperDims(pr);
+  const innerW = Math.max(10, wMm - pr.marginMm * 2);
+  const innerH = Math.max(10, hMm - pr.marginMm * 2);
+  return {
+    ...pr,
+    pages: pr.pages.map((pg) => {
+      if (pg.id !== pr.activePageId) return pg;
+      const movable = pg.layers.filter((l) => !l.hidden && !l.locked);
+      const fixed = pg.layers.filter((l) => l.hidden || l.locked);
+      const n = movable.length;
+      if (!n) return pg;
+      const cols = Math.ceil(Math.sqrt(n * (innerW / innerH)));
+      const rows = Math.ceil(n / cols);
+      const gap = Math.min(3, innerW / (cols * 6));
+      const cellW = (innerW - gap * (cols - 1)) / cols;
+      const cellH = (innerH - gap * (rows - 1)) / rows;
+      const arranged = movable.map((l, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const ar = l.wMm / l.hMm || 1;
+        let w = cellW;
+        let h = w / ar;
+        if (h > cellH) { h = cellH; w = h * ar; }
+        const cx = pr.marginMm + c * (cellW + gap) + cellW / 2;
+        const cy = pr.marginMm + r * (cellH + gap) + cellH / 2;
+        return { ...l, rotation: 0, wMm: w, hMm: h, xMm: cx - w / 2, yMm: cy - h / 2 };
+      });
+      return { ...pg, layers: [...fixed, ...arranged] };
+    }),
+  };
+}
+
+/**
+ * cropImage — given a dataURL and a percent rectangle (0..1), produce a
+ * new cropped dataURL plus its intrinsic pixel dimensions.
+ */
+function cropImage(
+  src: string,
+  rect: { x: number; y: number; w: number; h: number },
+): Promise<{ src: string; w: number; h: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const sx = Math.max(0, Math.floor(rect.x * img.naturalWidth));
+      const sy = Math.max(0, Math.floor(rect.y * img.naturalHeight));
+      const sw = Math.max(1, Math.floor(rect.w * img.naturalWidth));
+      const sh = Math.max(1, Math.floor(rect.h * img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = sw;
+      c.height = sh;
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("no ctx"));
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      resolve({ src: c.toDataURL("image/png"), w: sw, h: sh });
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 // =========================================================================
 //  PDF import dialog — render selected pages and add each as a new page.
 // =========================================================================
