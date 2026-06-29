@@ -451,11 +451,32 @@ function TopBar() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
+      {/* Highlighted Import action — visually prominent so the primary
+          "bring in an image" path is obvious on mobile. */}
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        title="Import image"
+        aria-label="Import image"
+        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-md shrink-0
+                   text-white shadow-md shadow-orange-500/30
+                   bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500
+                   hover:from-orange-600 hover:to-rose-600 active:translate-y-px transition"
+        style={{ backgroundImage: "linear-gradient(135deg,#fb923c 0%,#f97316 45%,#f43f5e 100%)" }}
+      >
+        <ImagePlus className="size-4" />
+        <span className="text-[10px] leading-none font-semibold">Import</span>
+      </button>
+
       <TbBtn label="Add" onClick={() => fileRef.current?.click()}><Upload className="size-4" /></TbBtn>
       <TbBtn label="Camera" onClick={() => cameraRef.current?.click()}><Camera className="size-4" /></TbBtn>
       <TbBtn label="PDF" onClick={() => pdfRef.current?.click()}><FileType2 className="size-4" /></TbBtn>
 
       <TemplatesMenu />
+
+      <TbBtn label="Arrange" onClick={() => dispatch({ type: "set", updater: (pr) => autoArrange(pr) })}>
+        <Wand2 className="size-4" />
+      </TbBtn>
 
       <TbBtn
         label={p.snap ? "Snap on" : "Snap"}
