@@ -1008,8 +1008,10 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate 90°"><RotateCw className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip horizontal"><FlipHorizontal className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip vertical"><FlipVertical className="size-4" /></Button>
+      <Button size="icon" variant="ghost" onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-4" /></Button>
       <Button size="icon" variant="ghost" onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-4" /></Button>
+      <CropDialog open={cropOpen} onOpenChange={setCropOpen} layer={selectedLayer} />
     </footer>
   );
 }
