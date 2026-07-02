@@ -282,6 +282,7 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
         top: layer.yMm * pxPerMm,
         width: W,
         height: H,
+        touchAction: "none",
       }}
     >
       <div
@@ -311,16 +312,16 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
         <>
           {(["tl", "tr", "bl", "br"] as const).map((corner) => {
             const pos: Record<typeof corner, React.CSSProperties> = {
-              tl: { left: -6, top: -6, cursor: "nwse-resize" },
-              tr: { right: -6, top: -6, cursor: "nesw-resize" },
-              bl: { left: -6, bottom: -6, cursor: "nesw-resize" },
-              br: { right: -6, bottom: -6, cursor: "nwse-resize" },
+              tl: { left: -10, top: -10, cursor: "nwse-resize" },
+              tr: { right: -10, top: -10, cursor: "nesw-resize" },
+              bl: { left: -10, bottom: -10, cursor: "nesw-resize" },
+              br: { right: -10, bottom: -10, cursor: "nwse-resize" },
             };
             return (
               <div
                 key={corner}
-                className="absolute w-3 h-3 bg-primary border-2 border-background rounded-sm"
-                style={pos[corner]}
+                className="absolute w-5 h-5 bg-primary border-2 border-background rounded-sm shadow-md"
+                style={{ ...pos[corner], touchAction: "none" }}
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   dragRef.current = {
@@ -343,7 +344,8 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
             );
           })}
           <div
-            className="absolute left-1/2 -top-7 -translate-x-1/2 w-4 h-4 bg-primary rounded-full border-2 border-background cursor-grab"
+            className="absolute left-1/2 -top-9 -translate-x-1/2 w-6 h-6 bg-primary rounded-full border-2 border-background cursor-grab shadow-md"
+            style={{ touchAction: "none" }}
             onPointerDown={(e) => {
               e.stopPropagation();
               const rect = elRef.current!.getBoundingClientRect();

@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
-import { Github, ArrowRight, Printer } from "lucide-react";
+import { Github, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-/**
- * EntrySplash — first-paint welcome screen with an animated 3D-ish hero,
- * the app name, a short pitch, an Enter button, and a credit footer with
- * a GitHub icon link.
- *
- * It auto-hides after the user clicks Enter and remembers the choice for
- * the current browser session so it doesn't get in the way during a work
- * session, but still re-greets the user on a fresh visit.
- */
+import appIcon from "/icon-512.png?url";
 export function EntrySplash({ onEnter }: { onEnter: () => void }) {
   const [leaving, setLeaving] = useState(false);
 
@@ -47,19 +38,18 @@ export function EntrySplash({ onEnter }: { onEnter: () => void }) {
 
       {/* Hero */}
       <div className="relative flex-1 w-full flex flex-col items-center justify-center px-6 text-center">
-        {/* 3D rotating printer mark */}
-        <div className="relative mb-8 [perspective:900px]">
-          <div className="relative size-28 sm:size-36 pa-spin-3d">
-            <div className="absolute inset-0 rounded-2xl bg-white shadow-xl border border-orange-200 [transform:rotateY(0deg)_translateZ(36px)]" />
-            <div className="absolute inset-0 rounded-2xl bg-orange-100 shadow-lg border border-orange-300 [transform:rotateY(0deg)_translateZ(18px)]" />
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-500 shadow-2xl flex items-center justify-center text-white [transform:rotateY(0deg)_translateZ(0)]">
-              <Printer className="size-12 sm:size-16 drop-shadow" strokeWidth={2.2} />
+        {/* Static app icon mark — auto-rotate disabled per user preference. */}
+        <div className="relative mb-8">
+          <div className="relative size-28 sm:size-36">
+            <div className="absolute -inset-3 rounded-3xl bg-gradient-to-br from-orange-400/40 to-rose-500/40 blur-2xl" />
+            <div className="absolute inset-0 rounded-2xl bg-white shadow-2xl border border-orange-200 flex items-center justify-center overflow-hidden">
+              <img src={appIcon} alt="Print Axis Pro" className="w-full h-full object-contain p-2" draggable={false} />
             </div>
           </div>
         </div>
 
         <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-br from-orange-600 via-rose-500 to-amber-500 bg-clip-text text-transparent">
-          Print Adjuster Pro
+          Print Axis Pro
         </h1>
         <p className="mt-3 max-w-md text-sm sm:text-base text-muted-foreground">
           An offline-first print layout editor. Place photos at exact mm/cm/inch

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Upload, Save, Printer, Download, Undo2, Redo2,
+  Printer, Download, Undo2, Redo2,
   Trash2, Copy, Lock, Unlock, Eye, EyeOff, ArrowUp, ArrowDown,
   AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyCenter,
   AlignStartHorizontal, AlignEndHorizontal,
   RotateCw, FlipHorizontal, FlipVertical, Layers, FileText, Image as ImgIcon,
-  Maximize2, FolderOpen, Sparkles, Camera, Plus, ChevronLeft, ChevronRight, X,
+  Maximize2, Sparkles, Plus, ChevronLeft, ChevronRight, X,
   LayoutGrid, FileType2, Github, Magnet, Smartphone, Crop, Wand2, ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ import type { Layer, Project, Unit } from "@/lib/editor/types";
 import { PAPERS } from "@/lib/editor/papers";
 import { TEMPLATES } from "@/lib/editor/templates";
 import { fromMm, toMm } from "@/lib/editor/units";
-import { listProjects, saveProject, deleteProject, duplicateProject } from "@/lib/editor/storage";
+
 import {
   exportPdf, exportPng, exportJpg, exportDocx, printProject, rasterizeAll,
   type Scope,
@@ -182,7 +182,7 @@ function EditorShell() {
 
         <div ref={containerRef} className="flex-1 relative min-w-0">
           <PaperCanvas pxPerMm={pxPerMm} />
-          <ZoomControl pxPerMm={pxPerMm} onChange={setPxPerMm} />
+          
         </div>
       </div>
       <BottomBar selectedLayer={selectedLayer} />
@@ -259,7 +259,7 @@ function FirstRunInstallBanner() {
     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs sm:text-sm">
       <Smartphone className="size-4 shrink-0" />
       <span className="flex-1 min-w-0 truncate">
-        Install <b>Print Adjuster Pro</b> for offline use.
+        Install <b>Print Axis Pro</b> for offline use.
       </span>
       <Button size="sm" variant="secondary" className="h-7 shrink-0" onClick={install}>
         Install
@@ -396,8 +396,6 @@ function TopBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
-  const [openProjects, setOpenProjects] = useState(false);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [pdfPending, setPdfPending] = useState<File | null>(null);
 
   async function handleFiles(files: FileList | null) {
@@ -416,18 +414,6 @@ function TopBar() {
       dispatch({ type: "select", id: layer.id });
     }
   }
-
-  async function onSave() {
-    await saveProject(p);
-    toast.success("Project saved");
-  }
-  async function onOpenProjects() {
-    setProjects(await listProjects());
-    setOpenProjects(true);
-  }
-  async function onLoad(pr: Project) { dispatch({ type: "load", project: pr }); setOpenProjects(false); }
-  async function onDelete(id: string) { await deleteProject(id); setProjects(await listProjects()); }
-  async function onDuplicate(pr: Project) { await duplicateProject(pr); setProjects(await listProjects()); }
 
   return (
     <header className="flex flex-wrap items-center gap-1 px-2 py-1.5 border-b border-orange-200/60 dark:border-orange-900/40 bg-orange-50 dark:bg-orange-950/40">
@@ -451,45 +437,29 @@ function TopBar() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
       <input ref={pdfRef} type="file" accept="application/pdf" hidden onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
 
-      {/* Highlighted Import action — visually prominent so the primary
-          "bring in an image" path is obvious on mobile. */}
-      <button
-        type="button"
+      {/* Primary Import — full-featured button matching Export size. */}
+      <Button
+        size="sm"
         onClick={() => fileRef.current?.click()}
-        title="Import image"
-        aria-label="Import image"
-        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-md shrink-0
-                   text-white shadow-md shadow-orange-500/30
-                   bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500
-                   hover:from-orange-600 hover:to-rose-600 active:translate-y-px transition"
-        style={{ backgroundImage: "linear-gradient(135deg,#fb923c 0%,#f97316 45%,#f43f5e 100%)" }}
+        className="bg-gradient-to-br from-orange-500 via-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white shadow-md shadow-orange-500/30"
       >
-        <ImagePlus className="size-4" />
-        <span className="text-[10px] leading-none font-semibold">Import</span>
-      </button>
+        <ImagePlus className="size-4 mr-1" /> Import
+      </Button>
 
-      <TbBtn label="Add" onClick={() => fileRef.current?.click()}><Upload className="size-4" /></TbBtn>
-      <TbBtn label="Camera" onClick={() => cameraRef.current?.click()}><Camera className="size-4" /></TbBtn>
       <TbBtn label="PDF" onClick={() => pdfRef.current?.click()}><FileType2 className="size-4" /></TbBtn>
 
       <TemplatesMenu />
 
-      <TbBtn label="Arrange" onClick={() => dispatch({ type: "set", updater: (pr) => autoArrange(pr) })}>
-        <Wand2 className="size-4" />
-      </TbBtn>
-
-      <TbBtn
-        label={p.snap ? "Snap on" : "Snap"}
-        active={p.snap}
-        onClick={() => dispatch({ type: "set", updater: (pr) => ({ ...pr, snap: !pr.snap }) })}
+      {/* Arrange — filled background so it reads as an action, not decoration. */}
+      <Button
+        size="sm"
+        onClick={() => dispatch({ type: "set", updater: (pr) => autoArrange(pr) })}
+        className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20"
       >
-        <Magnet className="size-4" />
-      </TbBtn>
+        <Wand2 className="size-4 mr-1" /> Arrange
+      </Button>
 
       <div className="flex-1 min-w-2" />
-
-      <TbBtn label="Open" onClick={onOpenProjects}><FolderOpen className="size-4" /></TbBtn>
-      <TbBtn label="Save" onClick={onSave}><Save className="size-4" /></TbBtn>
 
       <ExportMenu />
       <PrintPreviewButton />
@@ -510,25 +480,7 @@ function TopBar() {
       </Sheet>
 
 
-      <Dialog open={openProjects} onOpenChange={setOpenProjects}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Saved projects</DialogTitle></DialogHeader>
-          <div className="max-h-80 overflow-y-auto divide-y divide-border">
-            {!projects.length && <p className="text-sm text-muted-foreground py-6 text-center">No saved projects yet.</p>}
-            {projects.map((pr) => (
-              <div key={pr.id} className="flex items-center gap-2 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate text-sm">{pr.name}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(pr.updatedAt).toLocaleString()}</div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => onLoad(pr)}>Open</Button>
-                <Button size="icon" variant="ghost" onClick={() => onDuplicate(pr)} title="Duplicate"><Copy className="size-4" /></Button>
-                <Button size="icon" variant="ghost" onClick={() => onDelete(pr.id)} title="Delete"><Trash2 className="size-4" /></Button>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
+
       <PdfImportDialog file={pdfPending} onClose={() => setPdfPending(null)} />
     </header>
 
@@ -996,25 +948,38 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
     mut((l) => ({ ...l, yMm: kind === "top" ? p.marginMm : kind === "bottom" ? hMm - p.marginMm - l.hMm : (hMm - l.hMm) / 2 }));
   }
 
+  const BB = ({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className="flex flex-col items-center justify-center gap-0.5 shrink-0 h-14 min-w-14 px-2 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/40 active:scale-95 transition text-foreground/85"
+    >
+      {children}
+      <span className="text-[10px] leading-none font-medium">{title}</span>
+    </button>
+  );
   return (
-    <footer className="flex items-center gap-1 px-2 py-1 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
-      <Button size="icon" variant="ghost" onClick={() => alignH("left")} title="Align left"><AlignLeft className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alignH("center")} title="Center horizontally"><AlignCenter className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alignH("right")} title="Align right"><AlignRight className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alignV("top")} title="Align top"><AlignStartHorizontal className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alignV("middle")} title="Center vertically"><AlignVerticalJustifyCenter className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => alignV("bottom")} title="Align bottom"><AlignEndHorizontal className="size-4" /></Button>
-      <div className="w-px h-6 bg-border mx-1" />
-      <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate 90°"><RotateCw className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip horizontal"><FlipHorizontal className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip vertical"><FlipVertical className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-4" /></Button>
-      <Button size="icon" variant="ghost" onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-4" /></Button>
+    <footer className="flex items-center gap-1 px-2 py-1.5 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
+      <BB onClick={() => alignH("left")} title="Left"><AlignLeft className="size-5" /></BB>
+      <BB onClick={() => alignH("center")} title="Center"><AlignCenter className="size-5" /></BB>
+      <BB onClick={() => alignH("right")} title="Right"><AlignRight className="size-5" /></BB>
+      <BB onClick={() => alignV("top")} title="Top"><AlignStartHorizontal className="size-5" /></BB>
+      <BB onClick={() => alignV("middle")} title="Middle"><AlignVerticalJustifyCenter className="size-5" /></BB>
+      <BB onClick={() => alignV("bottom")} title="Bottom"><AlignEndHorizontal className="size-5" /></BB>
+      <div className="w-px h-8 bg-border mx-1" />
+      <BB onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate"><RotateCw className="size-5" /></BB>
+      <BB onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip H"><FlipHorizontal className="size-5" /></BB>
+      <BB onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip V"><FlipVertical className="size-5" /></BB>
+      <BB onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-5" /></BB>
+      <BB onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-5" /></BB>
+      <BB onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-5" /></BB>
       <CropDialog open={cropOpen} onOpenChange={setCropOpen} layer={selectedLayer} />
     </footer>
   );
 }
+
 
 function ZoomControl({ pxPerMm, onChange }: { pxPerMm: number; onChange: (v: number) => void }) {
   return (
@@ -1534,14 +1499,40 @@ function CropDialog({
   const [r, setR] = useState(0);
   const [b, setB] = useState(0);
   const [l, setL] = useState(0);
+  const [freehand, setFreehand] = useState(false);
   const [busy, setBusy] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) { setT(0); setR(0); setB(0); setL(0); }
+    if (open) { setT(0); setR(0); setB(0); setL(0); setFreehand(false); }
   }, [open, layer.id]);
 
   const wPct = Math.max(1, 100 - l - r);
   const hPct = Math.max(1, 100 - t - b);
+
+  // Freehand drag: user drags on the image to define a rectangle in %.
+  function onStagePointerDown(e: React.PointerEvent) {
+    if (!freehand || !stageRef.current) return;
+    const el = stageRef.current;
+    el.setPointerCapture(e.pointerId);
+    const rect = el.getBoundingClientRect();
+    const startX = ((e.clientX - rect.left) / rect.width) * 100;
+    const startY = ((e.clientY - rect.top) / rect.height) * 100;
+    setL(startX); setT(startY); setR(100 - startX); setB(100 - startY);
+    const move = (ev: PointerEvent) => {
+      const x = Math.max(0, Math.min(100, ((ev.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((ev.clientY - rect.top) / rect.height) * 100));
+      const nl = Math.min(startX, x); const nr = 100 - Math.max(startX, x);
+      const nt = Math.min(startY, y); const nb = 100 - Math.max(startY, y);
+      setL(nl); setR(nr); setT(nt); setB(nb);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
 
   async function apply() {
     if (!layer.src) return;
@@ -1576,31 +1567,61 @@ function CropDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Crop image</DialogTitle></DialogHeader>
-        <div className="relative bg-muted/40 rounded-md overflow-hidden" style={{ aspectRatio: `${layer.intrinsicW}/${layer.intrinsicH}` }}>
-          {layer.src && <img src={layer.src} alt="" className="absolute inset-0 w-full h-full object-contain" />}
-          {/* dim overlays */}
-          <div className="absolute inset-x-0 top-0 bg-black/55" style={{ height: `${t}%` }} />
-          <div className="absolute inset-x-0 bottom-0 bg-black/55" style={{ height: `${b}%` }} />
-          <div className="absolute top-0 bottom-0 left-0 bg-black/55" style={{ width: `${l}%` }} />
-          <div className="absolute top-0 bottom-0 right-0 bg-black/55" style={{ width: `${r}%` }} />
-          {/* crop frame */}
-          <div className="absolute border-2 border-orange-400 pointer-events-none"
-               style={{ left: `${l}%`, right: `${r}%`, top: `${t}%`, bottom: `${b}%` }} />
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col gap-3 p-4">
+        <DialogHeader className="shrink-0">
+          <DialogTitle>Crop image</DialogTitle>
+        </DialogHeader>
+
+        {/* Scrollable middle section so tall images never push the Apply button off-screen. */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
+          <div
+            ref={stageRef}
+            onPointerDown={onStagePointerDown}
+            className={`relative mx-auto bg-muted/40 rounded-md overflow-hidden select-none ${freehand ? "cursor-crosshair" : ""}`}
+            style={{
+              aspectRatio: `${layer.intrinsicW}/${layer.intrinsicH}`,
+              maxHeight: "45vh",
+              maxWidth: "100%",
+              width: "auto",
+              touchAction: "none",
+            }}
+          >
+            {layer.src && <img src={layer.src} alt="" className="absolute inset-0 w-full h-full object-contain pointer-events-none" draggable={false} />}
+            <div className="absolute inset-x-0 top-0 bg-black/55 pointer-events-none" style={{ height: `${t}%` }} />
+            <div className="absolute inset-x-0 bottom-0 bg-black/55 pointer-events-none" style={{ height: `${b}%` }} />
+            <div className="absolute top-0 bottom-0 left-0 bg-black/55 pointer-events-none" style={{ width: `${l}%` }} />
+            <div className="absolute top-0 bottom-0 right-0 bg-black/55 pointer-events-none" style={{ width: `${r}%` }} />
+            <div className="absolute border-2 border-orange-400 pointer-events-none"
+                 style={{ left: `${l}%`, right: `${r}%`, top: `${t}%`, bottom: `${b}%` }} />
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            <div>
+              <Label className="text-xs">Freehand crop</Label>
+              <p className="text-[11px] text-muted-foreground">Drag on the image to select an area.</p>
+            </div>
+            <Switch checked={freehand} onCheckedChange={setFreehand} />
+          </div>
+
+          {!freehand && (
+            <div className="grid grid-cols-2 gap-3">
+              <SliderRow label="Top" value={t} min={0} max={90} onChange={setT} />
+              <SliderRow label="Bottom" value={b} min={0} max={90} onChange={setB} />
+              <SliderRow label="Left" value={l} min={0} max={90} onChange={setL} />
+              <SliderRow label="Right" value={r} min={0} max={90} onChange={setR} />
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-3 pt-2">
-          <SliderRow label="Top" value={t} min={0} max={90} onChange={setT} />
-          <SliderRow label="Bottom" value={b} min={0} max={90} onChange={setB} />
-          <SliderRow label="Left" value={l} min={0} max={90} onChange={setL} />
-          <SliderRow label="Right" value={r} min={0} max={90} onChange={setR} />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-          <Button onClick={apply} disabled={busy}>{busy ? "Cropping…" : "Apply crop"}</Button>
+
+        <DialogFooter className="shrink-0 flex-row gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy} className="flex-1 sm:flex-none">Cancel</Button>
+          <Button onClick={apply} disabled={busy} className="flex-1 sm:flex-none bg-gradient-to-br from-orange-500 to-rose-500 text-white">
+            {busy ? "Cropping…" : "Apply crop"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
