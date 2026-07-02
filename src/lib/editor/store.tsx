@@ -27,7 +27,7 @@ function defaultProject(): Project {
   const page = newPage();
   return {
     id: crypto.randomUUID(),
-    name: "Untitled",
+    name: "Print Axis",
     paperId: "a4",
     customW: 210,
     customH: 297,

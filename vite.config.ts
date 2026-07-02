@@ -19,12 +19,12 @@ export default defineConfig({
           globPatterns: ["**/*.{js,css,html,png,svg,webmanifest,woff2}"],
         },
         manifest: {
-          name: "Print Adjuster Pro",
-          short_name: "PrintAdjuster",
+          name: "Print Axis Pro",
+          short_name: "PrintAxis",
           description:
             "Offline print-layout editor for exact-size photo and document printing.",
-          theme_color: "#1e40af",
-          background_color: "#0b1220",
+          theme_color: "#ea580c",
+          background_color: "#fff7ed",
           display: "standalone",
           orientation: "any",
           start_url: "/",

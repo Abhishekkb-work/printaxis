@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://print-axis-pro.app/sitemap.xml

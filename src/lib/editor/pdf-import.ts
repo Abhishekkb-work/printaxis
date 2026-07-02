@@ -1,9 +1,6 @@
 // Render PDF pages to PNG data URLs using pdfjs-dist.
-import * as pdfjs from "pdfjs-dist";
-// Vite resolves this to a hashed URL; the worker is bundled for offline use.
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+// NOTE: pdfjs references browser-only globals (DOMMatrix, canvas). We import
+// it lazily so SSR doesn't crash.
 
 export type PdfPageImage = {
   pageNumber: number;
@@ -12,7 +9,22 @@ export type PdfPageImage = {
   h: number;
 };
 
+let _pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
+async function getPdfjs() {
+  if (typeof window === "undefined") throw new Error("pdfjs is browser-only");
+  if (!_pdfjsPromise) {
+    _pdfjsPromise = (async () => {
+      const pdfjs = await import("pdfjs-dist");
+      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+      return pdfjs;
+    })();
+  }
+  return _pdfjsPromise;
+}
+
 export async function loadPdfFromFile(file: File) {
+  const pdfjs = await getPdfjs();
   const buf = await file.arrayBuffer();
   return pdfjs.getDocument({ data: buf }).promise;
 }
@@ -23,7 +35,6 @@ export async function renderPdfPage(
   dpi = 200,
 ): Promise<PdfPageImage> {
   const page = await doc.getPage(pageNumber);
-  // pdf.js viewport defaults to 72 dpi; scale up.
   const viewport = page.getViewport({ scale: dpi / 72 });
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil(viewport.width);
