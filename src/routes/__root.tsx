@@ -82,11 +82,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Print Axis Pro (Print by Abhi) — offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
       { name: "author", content: "Abhishek K B" },
       { property: "og:site_name", content: "Print Axis Pro" },
-      { property: "og:title", content: "Print Axis Pro — Offline Print Layout Editor" },
-      { property: "og:description", content: "Offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX export." },
+      { property: "og:title", content: "Print Axis Pro — Offline Print Layout Editor by Abhi" },
+      { property: "og:description", content: "Print Axis Pro (Print by Abhi) — offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
 
+      { name: "twitter:title", content: "Print Axis Pro — Offline Print Layout Editor by Abhi" },
+      { name: "twitter:description", content: "Print Axis Pro (Print by Abhi) — offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/50ab8388-30b5-467d-9b59-49f7358371d3" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/50ab8388-30b5-467d-9b59-49f7358371d3" },
     ],
     links: [
       {
