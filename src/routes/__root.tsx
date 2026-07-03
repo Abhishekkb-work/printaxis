@@ -77,19 +77,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Print Axis Pro — Offline Print Layout Editor" },
+      { name: "description", content: "Offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
+      { name: "author", content: "Abhishek K B" },
+      { property: "og:site_name", content: "Print Axis Pro" },
+      { property: "og:title", content: "Print Axis Pro — Offline Print Layout Editor" },
+      { property: "og:description", content: "Offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX export." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Print Axis Pro",
+          url: "https://printaxis.lovable.app/",
+        }),
       },
     ],
   }),
