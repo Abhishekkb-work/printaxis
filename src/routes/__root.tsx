@@ -77,14 +77,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Print Axis Pro — Offline Print Layout Editor" },
-      { name: "description", content: "Offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
+      { name: "google-site-verification", content: "knMvxmU_w_K5PFbOFKRig6hE_RREluSMzvllG6KJdFI" },
+      { title: "Print Axis Pro — Offline Print Layout Editor by Abhi" },
+      { name: "description", content: "Print Axis Pro (Print by Abhi) — offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX/PNG/JPG export." },
       { name: "author", content: "Abhishek K B" },
       { property: "og:site_name", content: "Print Axis Pro" },
       { property: "og:title", content: "Print Axis Pro — Offline Print Layout Editor" },
       { property: "og:description", content: "Offline-first print layout editor for exact-size photo & document printing. Templates, multi-page, PDF/DOCX export." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+
     ],
     links: [
       {

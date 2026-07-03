@@ -8,9 +8,11 @@ import { Toaster } from "@/components/ui/sonner";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Print Axis Pro — Offline Print Layout Editor" },
-      { name: "description", content: "Free offline print layout editor. Place photos at exact mm/cm/inch sizes, use passport & ID templates, and export to PDF, DOCX, PNG or JPG." },
-      { name: "keywords", content: "print axis pro, print layout editor, offline print tool, passport photo maker, exact size print, PDF export, PWA print app" },
+      { title: "Print Axis Pro — Offline Print Layout Editor by Abhi" },
+      { name: "description", content: "Print Axis Pro (also known as Print by Abhi / Abhi Print Axis) is a free offline print layout editor. Place photos at exact mm/cm/inch sizes, use passport & ID templates, and export to PDF, DOCX, PNG or JPG." },
+      { name: "keywords", content: "print axis pro, print axis, abhi print axis, print by abhi, print axis by abhi, abhishek print axis, abhi print, print pro by abhi, print adjuster pro, print layout editor, offline print tool, passport photo maker, exact size print, PDF export, DOCX export, PWA print app, Android print app, multi page print, photo print editor" },
+      { name: "google-site-verification", content: "knMvxmU_w_K5PFbOFKRig6hE_RREluSMzvllG6KJdFI" },
+
       { name: "author", content: "Abhishek K B" },
       { name: "robots", content: "index, follow" },
       { name: "theme-color", content: "#ea580c" },

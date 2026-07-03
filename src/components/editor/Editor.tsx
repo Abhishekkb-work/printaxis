@@ -340,7 +340,7 @@ function PagesBar() {
         <Copy className="size-4" />
       </Button>
       <div className="flex-1" />
-      <PagesOverviewButton />
+
       <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" aria-label="Move page left" disabled={idx <= 0}
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, -1) })}>
         <ChevronLeft className="size-4" />
@@ -459,8 +459,10 @@ function TopBar() {
       >
         <Wand2 className="size-4 mr-1" /> Arrange
       </Button>
+      <PagesOverviewButton />
 
       <div className="flex-1 min-w-2" />
+
 
       <ExportMenu />
       <PrintPreviewButton />
@@ -963,23 +965,24 @@ function BottomBar({ selectedLayer }: { selectedLayer: Layer | null }) {
   );
   return (
     <footer className="flex items-center gap-1 px-2 py-1.5 border-t border-orange-200/60 dark:border-orange-900/40 bg-orange-50/80 dark:bg-orange-950/30 overflow-x-auto">
+      <BB onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-5" /></BB>
+      <BB onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-5" /></BB>
+      <BB onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate"><RotateCw className="size-5" /></BB>
+      <BB onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-5" /></BB>
+      <BB onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip H"><FlipHorizontal className="size-5" /></BB>
+      <BB onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip V"><FlipVertical className="size-5" /></BB>
+      <div className="w-px h-8 bg-border mx-1" />
       <BB onClick={() => alignH("left")} title="Left"><AlignLeft className="size-5" /></BB>
       <BB onClick={() => alignH("center")} title="Center"><AlignCenter className="size-5" /></BB>
       <BB onClick={() => alignH("right")} title="Right"><AlignRight className="size-5" /></BB>
       <BB onClick={() => alignV("top")} title="Top"><AlignStartHorizontal className="size-5" /></BB>
       <BB onClick={() => alignV("middle")} title="Middle"><AlignVerticalJustifyCenter className="size-5" /></BB>
       <BB onClick={() => alignV("bottom")} title="Bottom"><AlignEndHorizontal className="size-5" /></BB>
-      <div className="w-px h-8 bg-border mx-1" />
-      <BB onClick={() => mut((l) => ({ ...l, rotation: l.rotation + 90 }))} title="Rotate"><RotateCw className="size-5" /></BB>
-      <BB onClick={() => mut((l) => ({ ...l, flipH: !l.flipH }))} title="Flip H"><FlipHorizontal className="size-5" /></BB>
-      <BB onClick={() => mut((l) => ({ ...l, flipV: !l.flipV }))} title="Flip V"><FlipVertical className="size-5" /></BB>
-      <BB onClick={() => setCropOpen(true)} title="Crop"><Crop className="size-5" /></BB>
-      <BB onClick={() => dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => [...ls, { ...selectedLayer!, id: crypto.randomUUID(), xMm: selectedLayer!.xMm + 5, yMm: selectedLayer!.yMm + 5 }]) })} title="Duplicate"><Copy className="size-5" /></BB>
-      <BB onClick={() => { dispatch({ type: "set", updater: (pr) => setLayers(pr, (ls) => ls.filter((l) => l.id !== selectedLayer!.id)) }); dispatch({ type: "select", id: null }); }} title="Delete"><Trash2 className="size-5" /></BB>
       <CropDialog open={cropOpen} onOpenChange={setCropOpen} layer={selectedLayer} />
     </footer>
   );
 }
+
 
 
 function ZoomControl({ pxPerMm, onChange }: { pxPerMm: number; onChange: (v: number) => void }) {
@@ -1410,10 +1413,10 @@ function PagesOverviewButton() {
 
   return (
     <>
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Pages overview"
-        onClick={() => setOpen(true)}>
+      <TbBtn label="All pages" onClick={() => setOpen(true)}>
         <LayoutGrid className="size-4" />
-      </Button>
+      </TbBtn>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader><DialogTitle>All pages ({p.pages.length})</DialogTitle></DialogHeader>
