@@ -49,7 +49,7 @@ export function EntrySplash({ onEnter }: { onEnter: () => void }) {
         </div>
 
         <h1 className="text-4xl sm:text-5xl font-black tracking-tight bg-gradient-to-br from-orange-600 via-rose-500 to-amber-500 bg-clip-text text-transparent">
-          Print Axis Pro
+          Print Axis Pro — Offline Print Editor
         </h1>
         <p className="mt-3 max-w-md text-sm sm:text-base text-muted-foreground">
           An offline-first print layout editor. Place photos at exact mm/cm/inch

@@ -296,7 +296,7 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
         {layer.src ? (
           <img
             src={layer.src}
-            alt={layer.name}
+            alt={layer.name.replace(/\.[a-z0-9]{2,5}$/i, "")}
             draggable={false}
             className="w-full h-full object-fill pointer-events-none"
             style={{ filter }}
@@ -320,6 +320,8 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
             return (
               <div
                 key={corner}
+                role="slider"
+                aria-label={`Resize layer from ${corner} corner`}
                 className="absolute w-5 h-5 bg-primary border-2 border-background rounded-sm shadow-md"
                 style={{ ...pos[corner], touchAction: "none" }}
                 onPointerDown={(e) => {
@@ -344,6 +346,8 @@ function LayerView({ layer, pxPerMm, selected, paperWmm, paperHmm }: { layer: La
             );
           })}
           <div
+            role="slider"
+            aria-label="Rotate layer"
             className="absolute left-1/2 -top-9 -translate-x-1/2 w-6 h-6 bg-primary rounded-full border-2 border-background cursor-grab shadow-md"
             style={{ touchAction: "none" }}
             onPointerDown={(e) => {

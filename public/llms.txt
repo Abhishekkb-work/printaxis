@@ -1,0 +1,9 @@
+# Print Axis Pro
+
+> Offline-first print layout editor for exact-size photo and document printing. Place images at precise mm/cm/inch dimensions, arrange multi-page layouts, and export to PDF, DOCX, PNG or JPG.
+
+Print Axis Pro is an installable Android PWA. It works fully offline, supports passport and ID templates, PDF import, and Android Share Target for sharing images directly into the editor.
+
+## Pages
+
+- [Home](/): Main editor with paper canvas, image import, layout tools and export.

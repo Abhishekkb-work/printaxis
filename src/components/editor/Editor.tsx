@@ -323,6 +323,7 @@ function PagesBar() {
                   dispatch({ type: "set", updater: (pr) => removePage(pr, pg.id) });
                 }}
                 title="Remove page"
+                aria-label={`Remove page ${i + 1}`}
               >
                 <X className="size-3" />
               </button>
@@ -330,21 +331,21 @@ function PagesBar() {
           </div>
         );
       })}
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Add page"
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Add page" aria-label="Add page"
         onClick={() => dispatch({ type: "set", updater: (pr) => addPage(pr) })}>
         <Plus className="size-4" />
       </Button>
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Duplicate page"
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Duplicate page" aria-label="Duplicate page"
         onClick={() => dispatch({ type: "set", updater: (pr) => duplicatePage(pr, pr.activePageId) })}>
         <Copy className="size-4" />
       </Button>
       <div className="flex-1" />
       <PagesOverviewButton />
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" disabled={idx <= 0}
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move left" aria-label="Move page left" disabled={idx <= 0}
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, -1) })}>
         <ChevronLeft className="size-4" />
       </Button>
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move right" disabled={idx >= p.pages.length - 1}
+      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Move right" aria-label="Move page right" disabled={idx >= p.pages.length - 1}
         onClick={() => dispatch({ type: "set", updater: (pr) => movePage(pr, pr.activePageId, 1) })}>
         <ChevronRight className="size-4" />
       </Button>
