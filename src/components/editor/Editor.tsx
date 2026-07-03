@@ -1410,10 +1410,10 @@ function PagesOverviewButton() {
 
   return (
     <>
-      <Button size="icon" variant="ghost" className="size-7 shrink-0" title="Pages overview"
-        onClick={() => setOpen(true)}>
+      <TbBtn label="All pages" onClick={() => setOpen(true)}>
         <LayoutGrid className="size-4" />
-      </Button>
+      </TbBtn>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader><DialogTitle>All pages ({p.pages.length})</DialogTitle></DialogHeader>
