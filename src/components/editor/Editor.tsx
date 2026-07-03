@@ -459,8 +459,10 @@ function TopBar() {
       >
         <Wand2 className="size-4 mr-1" /> Arrange
       </Button>
+      <PagesOverviewButton />
 
       <div className="flex-1 min-w-2" />
+
 
       <ExportMenu />
       <PrintPreviewButton />
