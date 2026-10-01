@@ -1,159 +1,122 @@
 
 # 🖨️ Print Axis Pro
 
-> **Offline Print Layout Editor for the Web**
+<p align="center">
+  <strong>A modern browser-based print layout editor</strong>
+</p>
 
-Print Axis Pro is a browser-based print layout editor that lets you create, arrange, edit, and prepare print-ready documents directly from your browser.
+<p align="center">
+  Create, arrange, edit, import, print and export print-ready layouts — directly from your browser.
+</p>
 
-🌐 **Live Demo:** https://printaxis.vercel.app/
+<p align="center">
+  <a href="https://printaxis.vercel.app/">
+    <img src="https://img.shields.io/badge/🚀%20Live%20Demo-Print%20Axis%20Pro-111827?style=for-the-badge" alt="Live Demo" />
+  </a>
+  <a href="https://github.com/Abhishekkb-work/printaxis">
+    <img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github" alt="GitHub Repository" />
+  </a>
+</p>
 
----
-
-## ✨ Features
-
-- 📄 Import PDF documents
-- 🧩 Use ready-made templates
-- 📐 Configure paper size and orientation
-- 📏 Configure margins and measurement units
-- 🖼️ Visually arrange page elements
-- 🗂️ Manage multiple pages
-- 🧱 Manage layers and element properties
-- 🔲 Grid-based layout editing
-- 🧲 Snap elements to the grid
-- ↩️ Undo / Redo editing actions
-- 🖨️ Print directly from the application
-- 📤 Export completed layouts
-- 🌐 Browser-based workflow
-
----
-
-## 🎯 What Can You Do?
-
-Print Axis Pro is designed for creating and preparing print layouts without needing a traditional desktop publishing application.
-
-Typical workflow:
-
-```text
-┌─────────────────┐
-│  Create / Import│
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Configure Page  │
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Design Layout   │
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Arrange Elements│
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Grid / Snap     │
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Manage Pages    │
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│ Print / Export  │
-└─────────────────┘
-````
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square" alt="PWA" />
+</p>
 
 ---
 
- ## 🛠️ Editor
+## ✨ Overview
 
- The editor provides a visual workspace for designing print layouts.
+**Print Axis Pro** is a browser-based print layout editor built for creating and preparing print-ready documents in a visual workspace.
 
- ### Main Areas
+It combines document importing, page management, layout controls, grid-based positioning, snapping, layers, properties, printing and exporting into one focused application.
 
- | Area | Description |
-| --- | --- |
-| 🧰 Toolbar | Editing and document actions |
-| 📄 Pages | Manage and navigate pages |
-| 🧱 Layers | View and manage page elements |
-| ⚙️ Properties | Configure selected elements and pages |
-| 🎨 Canvas | Main visual editing workspace |
-| 🖨️ Print Panel | Configure printing |
-| 📤 Export | Export the final layout |
+The goal is simple:
+
+> **Make print layout editing faster, more precise and easier to manage directly from the browser.**
 
 ---
 
- ## 📐 Page Configuration
+## 🚀 Live Demo
 
- Print Axis Pro provides controls for configuring your document.
+### 👉 https://printaxis.vercel.app/
 
- ### Paper Size
-
- Configure the paper size according to your print requirements.
-
- ### Orientation
-
- Choose between:
-
- - Portrait
-- Landscape
-
- ### Units
-
- Work with measurement units suitable for print layouts.
-
- ### Margins
-
- Configure page margins to control the printable area.
+Open the application and start designing directly in your browser.
 
 ---
 
- ## 📏 Grid & Snapping
+## 🎯 Core Features
 
- The editor includes grid functionality for accurate positioning.
+### 📄 PDF Import
 
- You can configure:
+Import PDF documents and bring their pages into the editing workflow.
 
- - Grid visibility
-- Grid spacing
-- Snap-to-grid
-- Snap strength
-
- This makes it easier to create accurately aligned layouts.
+- PDF document loading
+- Page-based workflow
+- Visual document editing
+- PDF rendering in the browser
 
 ---
 
- ## 📄 PDF Import
+### 🧩 Templates
 
- Import an existing PDF and work with its pages inside the editor.
+Start layouts faster using predefined templates.
 
- This allows you to:
-
-```
-PDF
- │
- ▼
-Import
- │
- ▼
-Edit / Arrange
- │
- ▼
-Configure Layout
- │
- ▼
-Print / Export
-```
+Templates provide a foundation for common print compositions without having to build every layout from scratch.
 
 ---
 
- ## 🗂️ Page Management
+### 🎨 Visual Layout Editor
 
- The Pages panel allows you to work with multi-page documents.
+Design layouts inside a visual canvas.
 
- You can:
+The editor is built around direct manipulation of page content, making it easier to understand positioning and composition while working.
 
- - Navigate between pages
+---
+
+### 📐 Page Configuration
+
+Configure the document according to your printing requirements.
+
+- Paper size
+- Page orientation
+- Measurement units
+- Margins
+- Layout dimensions
+
+Supported workflows include both **portrait** and **landscape** orientations.
+
+---
+
+### 📏 Grid System
+
+Use a configurable grid to improve positioning accuracy.
+
+- Toggle grid visibility
+- Configure grid spacing
+- Align elements visually
+- Work with consistent measurements
+
+---
+
+### 🧲 Snap to Grid
+
+Enable snapping for more accurate positioning.
+
+Snap controls help keep elements aligned while designing complex layouts.
+
+---
+
+### 🗂️ Multi-Page Documents
+
+Work with multiple pages from a single workspace.
+
+The page workflow allows you to:
+
+- Navigate between pages
 - Organize pages
 - Arrange pages
 - Edit individual pages
@@ -161,253 +124,508 @@ Print / Export
 
 ---
 
- ## ↩️ Undo & Redo
+### 🧱 Layers
 
- Quickly revert or restore editing actions using the built-in:
+Manage the elements that make up a page through the layer system.
 
- - Undo
-- Redo
-
- controls.
+This makes it easier to understand and control the structure of complex layouts.
 
 ---
 
- ## 🖥️ Browser Based
+### ⚙️ Properties
 
- Print Axis Pro runs directly in the browser.
+Configure selected objects and page-level settings through the properties interface.
 
- No traditional desktop publishing software is required to access the web application.
-
- ### Live Application
-
- 👉 https://printaxis.vercel.app/
+This provides more precise control than relying only on direct manipulation.
 
 ---
 
- ## 🚀 Getting Started
+### ↩️ Undo & Redo
 
- ### Use the Online Version
+Quickly move backward or forward through editing actions.
 
- Simply open:
-
- **https://printaxis.vercel.app/**
-
- Then:
-
- 1. Create a new layout or import a PDF.
-2. Configure your paper size.
-3. Select the required orientation.
-4. Adjust margins and units.
-5. Arrange your elements.
-6. Use grid and snapping for precise positioning.
-7. Manage your pages.
-8. Print or export your final layout.
+```text
+Edit
+  ↓
+Undo
+  ↓
+Continue Editing
+  ↓
+Redo
+````
 
 ---
 
- ## 💻 Local Development
+ ### 🖨️ Print
 
- Clone the repository:
+ Prepare your completed layout for printing directly from the application.
 
-```
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-```
-
- Navigate into the project:
-
-```
-cd <YOUR_PROJECT_FOLDER>
-```
-
- Install dependencies:
-
-```
-npm install
-```
-
- Start the development server:
-
-```
-npm run dev
-```
-
- Then open the local development URL provided by your development environment.
+ The print workflow is designed around the final document layout rather than requiring a separate desktop publishing application.
 
 ---
 
- ## 📁 Project Structure
+ ### 📤 Export
 
- A typical project structure can look like:
+ Export completed layouts from the application for use outside the editor.
+
+---
+
+ ## 🧠 How It Works
+
+ Print Axis Pro follows a simple visual workflow:
 
 ```
-print-axis/
+                 ┌───────────────┐
+                 │ Create /      │
+                 │ Import        │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │ Configure     │
+                 │ Page          │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │ Design        │
+                 │ Layout        │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │ Arrange       │
+                 │ Elements      │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │ Grid / Snap   │
+                 │ Alignment     │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌───────────────┐
+                 │ Manage Pages  │
+                 └───────┬───────┘
+                         │
+                         ▼
+                 ┌────────────────┐
+                 │ Print / Export │
+                 └────────────────┘
+```
+
+---
+
+ # 🛠️ Tech Stack
+
+ Print Axis Pro is built using a modern TypeScript-based frontend stack.
+
+ | Technology | Purpose |
+| --- | --- |
+| **React 19** | UI framework |
+| **TypeScript** | Type-safe application development |
+| **Vite** | Development server and build tooling |
+| **TanStack Router** | Application routing |
+| **TanStack Start** | Application framework |
+| **Tailwind CSS 4** | Styling and UI system |
+| **Radix UI** | Accessible UI primitives |
+| **React Hook Form** | Form handling |
+| **Zod** | Schema validation |
+| **PDF.js** | PDF rendering and processing |
+| **jsPDF** | PDF generation |
+| **JSZip** | ZIP/archive handling |
+| **idb-keyval** | Browser IndexedDB storage |
+| **Lucide React** | Icon system |
+| **Recharts** | Data visualization |
+| **Sonner** | Toast notifications |
+| **vite-plugin-pwa** | Progressive Web App support |
+| **Workbox** | Service worker and caching support |
+
+---
+
+ # 🏗️ Architecture
+
+ The application is structured as a modern client-side web application.
+
+```
+┌──────────────────────────────────────────────┐
+│                  Print Axis Pro              │
+├──────────────────────────────────────────────┤
+│                                              │
+│                  React 19                    │
+│                      │                       │
+│          ┌───────────┼───────────┐           │
+│          ▼           ▼           ▼           │
+│      UI Layer    Editor Layer  Routing       │
+│          │           │           │           │
+│          ▼           ▼           ▼           │
+│      Radix UI     Layout      TanStack       │
+│      Tailwind     Engine       Router        │
+│          │           │                       │
+│          └───────────┼───────────────────┐   │
+│                      ▼                   │   │
+│               Document Processing        │   │
+│                      │                   │   │
+│          ┌───────────┼───────────┐       │   │
+│          ▼           ▼           ▼       │   │
+│        PDF.js      jsPDF       JSZip     │   │
+│                                          │   │
+│                      │                   │   │
+│                      ▼                   │   │
+│               Browser Storage            │   │
+│                   IndexedDB              │   │
+│                                          │   │
+└──────────────────────────────────────────┴───┘
+```
+
+---
+
+ # 📁 Project Structure
+
+```
+printaxis/
+│
+├── .github/
+│   └── workflows/
+│
+├── .lovable/
 │
 ├── public/
 │
 ├── src/
 │   ├── components/
-│   ├── editor/
-│   ├── pages/
-│   ├── utils/
+│   │
+│   ├── ...
+│   │
 │   └── ...
 │
-├── docs/
+├── .gitignore
+├── .prettierignore
+├── .prettierrc
 │
-├── package.json
+├── AGENTS.md
 ├── README.md
-└── ...
-```
-
- > Update this structure to match the actual source repository.
-
----
-
- ## 📸 Screenshots
-
- Add screenshots of the application here.
-
- ### Editor
-
-```
-![Print Axis Pro Editor](docs/editor.png)
-```
-
- ### PDF Import
-
-```
-![PDF Import](docs/pdf-import.png)
-```
-
- ### Properties Panel
-
-```
-![Properties Panel](docs/properties.png)
-```
-
- ### Print Panel
-
-```
-![Print Panel](docs/print-panel.png)
+│
+├── bun.lock
+├── bunfig.toml
+├── components.json
+│
+├── eslint.config.js
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+│
+└── google3baede3899ecf171.html
 ```
 
 ---
 
- ## 🔮 Roadmap
+ # 💻 Development
 
- - [ ] More templates
-- [ ] More paper sizes
-- [ ] Advanced alignment tools
-- [ ] Keyboard shortcuts
-- [ ] Improved layer management
-- [ ] Copy / paste elements
-- [ ] More export options
-- [ ] Enhanced print preview
-- [ ] Additional document formats
-- [ ] More advanced layout controls
+ ## Prerequisites
 
----
+ Make sure you have a modern version of:
 
- ## 🤝 Contributing
+ - Node.js
+- npm
+- Git
 
- Contributions are welcome!
-
- ### 1\. Fork the repository
-
-```
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-```
-
- ### 2\. Create a branch
-
-```
-git checkout -b feature/my-feature
-```
-
- ### 3\. Make your changes
-
- Implement your feature or fix.
-
- ### 4\. Commit your changes
-
-```
-git add .
-git commit -m "feat: add my feature"
-```
-
- ### 5\. Push your branch
-
-```
-git push origin feature/my-feature
-```
-
- ### 6\. Create a Pull Request
-
- Open a Pull Request on GitHub and describe your changes.
+ The repository also includes Bun configuration and a `bun.lock` file.
 
 ---
 
- ## 🐛 Bug Reports
-
- If you find a bug, please create a GitHub issue with:
-
- - A clear description
-- Steps to reproduce
-- Expected behavior
-- Actual behavior
-- Screenshots, if applicable
-
----
-
- ## 💡 Feature Requests
-
- Have an idea?
-
- Open a GitHub issue and describe:
+ ## Clone
 
 ```
-Problem
-   ↓
-Proposed Solution
-   ↓
-Expected Result
+git clone https://github.com/Abhishekkb-work/printaxis.git
+```
+
+```
+cd printaxis
 ```
 
 ---
 
- ## 📄 License
+ ## Install Dependencies
 
- Add your project license here.
-
- For example:
+ Using npm:
 
 ```
-MIT License
+npm install
 ```
 
- > Replace this section with the actual license used by the project.
+ Or using Bun:
+
+```
+bun install
+```
 
 ---
 
- ## 👨‍💻 Author
+ ## Start Development Server
 
- **ABHISHEK K B**
+```
+npm run dev
+```
 
- Built with 🧡 for easier browser-based print layout editing.
+ Or:
 
----
+```
+bun run dev
+```
 
- ## 🔗 Links
-
- 🌐 **Live Demo:**\
- https://printaxis.vercel.app/
-
- 💻 **GitHub:**\
- `<YOUR_GITHUB_REPOSITORY_URL>`
+ The Vite development server will start the application locally.
 
 ---
 
- \<p align="center"\> ### 🖨️ Print Axis Pro
+ # 📦 Production Build
 
- **Offline Print Layout Editor**
+ Create a production build:
 
- Built for simple, precise and flexible print layout editing.
+```
+npm run build
+```
+
+ Or:
+
+```
+bun run build
+```
+
+ Preview the production build:
+
+```
+npm run preview
+```
+
+---
+
+ # 🧹 Code Quality
+
+ Run ESLint:
+
+```
+npm run lint
+```
+
+ Format the project:
+
+```
+npm run format
+```
+
+---
+
+ # 🌐 Deployment
+
+ Print Axis Pro is deployed as a web application and is available at:
+
+ ### https://printaxis.vercel.app/
+
+ The project is compatible with modern Vite-based deployment workflows.
+
+---
+
+ # 📱 Progressive Web App
+
+ Print Axis Pro includes PWA tooling through:
+
+ - `vite-plugin-pwa`
+- Workbox
+- Service worker support
+- Browser caching / precaching
+
+ This provides the foundation for a more app-like browser experience.
+
+---
+
+ # 🔐 Browser-First Design
+
+ Print Axis Pro is designed around browser-native capabilities.
+
+ The application uses browser technologies for document handling, rendering, storage and layout workflows.
+
+ This helps keep the editing experience lightweight and accessible without requiring a traditional desktop publishing installation.
+
+---
+
+ # 🎨 Editor Workflow
+
+```
+┌──────────────────────────────────────────┐
+│                  TOOLBAR                 │
+├────────────┬─────────────────┬───────────┤
+│            │                 │           │
+│   PAGES    │     CANVAS      │ PROPERTIES│
+│            │                 │           │
+│  Page 01   │                 │  Size     │
+│  Page 02   │     Layout      │  Position │
+│  Page 03   │     Workspace   │  Margins  │
+│            │                 │  Settings │
+│            │                 │           │
+├────────────┴─────────────────┴───────────┤
+│                 LAYERS                    │
+├──────────────────────────────────────────┤
+│              PRINT / EXPORT              │
+└──────────────────────────────────────────┘
+```
+
+---
+
+ # 📐 Layout Model
+
+ A typical print document can be thought of as:
+
+```
+Document
+│
+├── Page
+│   ├── Background
+│   ├── Elements
+│   │   ├── Image
+│   │   ├── Text
+│   │   └── Other content
+│   │
+│   ├── Margins
+│   ├── Grid
+│   └── Properties
+│
+├── Page
+│   └── ...
+│
+└── Page
+    └── ...
+```
+
+ This page-oriented approach makes the editor suitable for multi-page print workflows.
+
+---
+
+ # 📄 Document Workflow
+
+```
+PDF / Template / New Document
+              │
+              ▼
+       Document Loaded
+              │
+              ▼
+        Page Selection
+              │
+              ▼
+       Layout Editing
+              │
+       ┌──────┴──────┐
+       ▼             ▼
+     Grid          Layers
+       │             │
+       └──────┬──────┘
+              ▼
+         Properties
+              │
+              ▼
+       Final Layout
+              │
+       ┌──────┴──────┐
+       ▼             ▼
+     Print         Export
+```
+
+---
+
+ # ⚡ Why Print Axis Pro?
+
+ Traditional print workflows often require switching between multiple applications for:
+
+```
+PDF Viewer
+   +
+Image Editor
+   +
+Document Editor
+   +
+Layout Software
+   +
+Print Dialog
+```
+
+ Print Axis Pro brings the core layout workflow into one browser-based workspace:
+
+```
+             PRINT AXIS PRO
+                    │
+       ┌────────────┼────────────┐
+       │            │            │
+      PDF         Layout       Pages
+       │            │            │
+       ├────────────┼────────────┤
+       │            │            │
+      Grid        Layers      Properties
+       │            │            │
+       └────────────┼────────────┘
+                    │
+              Print / Export
+```
+
+---
+
+ # 🧩 Key Capabilities
+
+```
+✓ PDF Import
+✓ Template Workflow
+✓ Multi-page Editing
+✓ Visual Layout
+✓ Page Configuration
+✓ Paper Size Controls
+✓ Portrait / Landscape
+✓ Measurement Units
+✓ Margin Controls
+✓ Grid System
+✓ Snap to Grid
+✓ Layers
+✓ Properties
+✓ Undo / Redo
+✓ Print Workflow
+✓ Export Workflow
+✓ Browser Storage
+✓ PWA Support
+```
+
+---
+
+ # 🚀 Project Status
+
+ Print Axis Pro is an actively developed browser-based print layout editor.
+
+ The application is available online and the source code is maintained in this repository.
+
+---
+
+ # 👨‍💻 Author
+
+ ## Abhishek K B
+
+ Built with ❤️ to make print layout editing simpler, faster and more accessible.
+
+---
+
+ # 🔗 Links
+
+ | Resource | Link |
+| --- | --- |
+| 🚀 Live Application | https://printaxis.vercel.app/ |
+| 💻 GitHub Repository | https://github.com/Abhishekkb-work/printaxis |
+
+---
+
+ # 📜 License
+
+ This project is currently distributed through the repository.
+
+ See the repository for the applicable licensing terms.
+
+---
+
+ \<p align="center"\> \<br /\> \<strong\>🖨️ Print Axis Pro\</strong\> \<br /\> \<sub\>Design • Arrange • Print • Export\</sub\> \<br /\> \<br /\> \<a href="https://printaxis.vercel.app/"\> Launch Print Axis Pro → \</a\> \</p\>
